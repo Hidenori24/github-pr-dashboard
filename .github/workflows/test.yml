@@ -1,0 +1,25 @@
+# GitHub Actions でコードの品質をチェック（オプション）
+# このファイルは必要に応じて有効化してください
+
+# name: Test
+# 
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
+# 
+# jobs:
+#   lint:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v3
+#       - uses: actions/setup-python@v4
+#         with:
+#           python-version: '3.11'
+#       - name: Install dependencies
+#         run: |
+#           pip install flake8
+#       - name: Lint with flake8
+#         run: |
+#           flake8 dashboard --count --select=E9,F63,F7,F82 --show-source --statistics

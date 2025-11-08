@@ -1,0 +1,17 @@
+# GitHub PR Dashboard - Required Packages
+
+# Core Framework
+streamlit>=1.28.0
+
+# Data Processing
+pandas>=2.0.0
+
+# Visualization
+plotly>=5.17.0
+
+# HTTP Requests
+requests>=2.31.0
+urllib3>=2.0.0
+
+# Date/Time Parsing
+python-dateutil>=2.8.0
