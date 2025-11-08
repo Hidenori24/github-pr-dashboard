@@ -1,6 +1,6 @@
 # GitHub PR Dashboard
 
-GitHubのPull Requestを可視化・分析するStreamlitダッシュボード
+GitHubのPull Requestを可視化・分析するダッシュボード
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -9,21 +9,46 @@ GitHubのPull Requestを可視化・分析するStreamlitダッシュボード
 
 PRの状態、レビュー状況、ボトルネックを直感的に可視化し、開発チームの生産性向上を支援します。
 
+## 🎯 2つのバージョン
+
+このリポジトリは2つの実装を提供しています:
+
+1. **[Streamlit版](dashboard/)** - ローカルPC上で動作するPythonベースのダッシュボード
+2. **[GitHub Pages版](Dashboard_pages/)** - GitHub Pagesで公開できる静的Webアプリケーション（🆕 推奨）
+
+| 機能 | Streamlit版 | **GitHub Pages版** |
+|------|------------|------------------|
+| 実行環境 | ローカルPC | **クラウド（無料）** |
+| セットアップ | Python環境必要 | **不要（ブラウザのみ）** |
+| 自動更新 | 手動設定 | **GitHub Actions（自動）** |
+| アクセス | localhost | **公開URL** |
+| チーム共有 | 難しい | **簡単（URLを共有）** |
+
+👉 **GitHub Pages版の使い方は [Dashboard_pages/README.md](Dashboard_pages/README.md) を参照してください**
+
 ## ディレクトリ構成
 
 ```
-dashboard/
-├── app.py                # メインエントリーポイント
-├── pages/
-│   ├── 1_dashboard.py    # PRタイムライン可視化
-│   ├── 2_analytics.py    # PR統計分析
-│   └── 3_four_keys.py    # Four Keys指標
-├── fetch_data.py         # データ取得スクリプト
-├── config.py             # 設定ファイル
-├── fetcher.py            # GitHub API呼び出し
-├── db_cache.py           # SQLiteキャッシュ管理
-├── action_tracker.py     # アクション追跡
-└── pr_cache.db           # キャッシュDB(自動生成)
+├── Dashboard_pages/       # 🆕 GitHub Pages版（静的Webアプリ）
+│   ├── index.html        # メインHTMLページ
+│   ├── css/              # スタイルシート
+│   ├── js/               # JavaScriptロジック
+│   ├── data/             # JSONデータ（自動生成）
+│   ├── generate_data.py  # データ生成スクリプト
+│   └── README.md         # Pages版のドキュメント
+│
+└── dashboard/            # Streamlit版（ローカル実行）
+    ├── app.py            # メインエントリーポイント
+    ├── pages/
+    │   ├── 1_dashboard.py    # PRタイムライン可視化
+    │   ├── 2_analytics.py    # PR統計分析
+    │   └── 3_four_keys.py    # Four Keys指標
+    ├── fetch_data.py     # データ取得スクリプト
+    ├── config.py         # 設定ファイル
+    ├── fetcher.py        # GitHub API呼び出し
+    ├── db_cache.py       # SQLiteキャッシュ管理
+    ├── action_tracker.py # アクション追跡
+    └── pr_cache.db       # キャッシュDB(自動生成)
 ```
 
 ## クイックスタート

@@ -1,0 +1,12 @@
+{
+  "repositories": [
+    {
+      "name": "Streamlit",
+      "owner": "streamlit",
+      "repo": "streamlit"
+    }
+  ],
+  "primaryRepoIndex": 0,
+  "lastGenerated": "2025-11-08T18:56:00Z",
+  "version": "1.0.0"
+}
