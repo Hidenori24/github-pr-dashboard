@@ -108,16 +108,52 @@ function setupTabs() {
     });
 }
 
+// Helper function to safely fetch JSON data with timeout and retry
+async function safeFetch(url, options = {}) {
+    const timeout = options.timeout || 10000; // 10 second timeout
+    const retries = options.retries || 1;
+    
+    for (let i = 0; i <= retries; i++) {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
+            
+            const response = await fetch(url, {
+                ...options,
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+                return await response.json();
+            } else {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+        } catch (error) {
+            if (i === retries) {
+                throw error;
+            }
+            console.warn(`Fetch attempt ${i + 1} failed, retrying...`, error);
+            await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
+        }
+    }
+}
+
 // Load all data from JSON files
 async function loadAllData() {
+    const loadingErrors = [];
+    
     try {
         // Load configuration
-        const configResponse = await fetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.config}`);
-        if (configResponse.ok) {
-            appData.config = await configResponse.json();
+        try {
+            appData.config = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.config}`, {
+                timeout: 5000,
+                retries: 2
+            });
             console.log('Config loaded:', appData.config);
-        } else {
-            console.warn('Config file not found, using defaults');
+        } catch (error) {
+            console.warn('Config file not found, using defaults:', error.message);
             appData.config = {
                 repositories: CONFIG.repositories,
                 primaryRepoIndex: CONFIG.primaryRepoIndex
@@ -125,43 +161,65 @@ async function loadAllData() {
         }
         
         // Load PR data
-        const prsResponse = await fetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.prs}`);
-        if (prsResponse.ok) {
-            appData.prs = await prsResponse.json();
+        try {
+            appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.prs}`, {
+                timeout: 10000,
+                retries: 2
+            });
             console.log('PRs loaded:', appData.prs.length);
-        } else {
-            console.warn('PR data not found, trying sample data');
+        } catch (error) {
+            console.warn('PR data not found, trying sample data:', error.message);
             // Try to load sample data as fallback
             try {
-                const sampleResponse = await fetch(`${CONFIG.dataSource.basePath}sample_prs.json`);
-                if (sampleResponse.ok) {
-                    appData.prs = await sampleResponse.json();
-                    console.log('Sample PRs loaded:', appData.prs.length);
-                } else {
-                    appData.prs = [];
-                }
+                appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}sample_prs.json`, {
+                    timeout: 5000,
+                    retries: 1
+                });
+                console.log('Sample PRs loaded:', appData.prs.length);
+                showWarning(typeof i18n !== 'undefined' ? 
+                    'Using sample data. GitHub Actions may not have generated real data yet.' :
+                    'サンプルデータを使用しています。GitHub Actionsがまだ実データを生成していない可能性があります。');
             } catch (e) {
-                console.warn('Sample data also not found');
+                console.warn('Sample data also not found:', e.message);
                 appData.prs = [];
+                loadingErrors.push('PR data');
             }
         }
         
-        // Load analytics data
-        const analyticsResponse = await fetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.analytics}`);
-        if (analyticsResponse.ok) {
-            appData.analytics = await analyticsResponse.json();
+        // Load analytics data (optional)
+        try {
+            appData.analytics = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.analytics}`, {
+                timeout: 5000,
+                retries: 1
+            });
             console.log('Analytics loaded');
+        } catch (error) {
+            console.warn('Analytics data not found:', error.message);
+            appData.analytics = null;
         }
         
-        // Load cache info
-        const cacheResponse = await fetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.cache_info}`);
-        if (cacheResponse.ok) {
-            appData.cacheInfo = await cacheResponse.json();
+        // Load cache info (optional)
+        try {
+            appData.cacheInfo = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.cache_info}`, {
+                timeout: 5000,
+                retries: 1
+            });
             console.log('Cache info loaded');
+        } catch (error) {
+            console.warn('Cache info not found:', error.message);
+            appData.cacheInfo = null;
+        }
+        
+        // Show summary of loading issues if any
+        if (loadingErrors.length > 0) {
+            const errorMsg = typeof i18n !== 'undefined' ? 
+                i18n.t('error.data_load') : 
+                'データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。';
+            showError(`${errorMsg}\nMissing: ${loadingErrors.join(', ')}`);
         }
         
     } catch (error) {
-        console.error('Error loading data:', error);
+        console.error('Critical error loading data:', error);
         const errorMsg = typeof i18n !== 'undefined' ? i18n.t('error.data_load') : 'データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。';
         showError(errorMsg);
     }
@@ -299,12 +357,13 @@ function displayCacheStatus() {
 
 // Show error message
 function showError(message) {
+    const errorTitle = typeof i18n !== 'undefined' ? i18n.t('error') : 'エラー';
     const errorDiv = document.createElement('div');
     errorDiv.className = 'status-banner warning';
     errorDiv.innerHTML = `
         <span>⚠️</span>
         <div>
-            <strong>エラー</strong>
+            <strong>${errorTitle}</strong>
             <p>${message}</p>
         </div>
     `;
@@ -312,6 +371,21 @@ function showError(message) {
     // Insert at the top of main content
     const mainContent = document.querySelector('.main-content');
     mainContent.insertBefore(errorDiv, mainContent.firstChild);
+}
+
+function showWarning(message) {
+    const warningDiv = document.createElement('div');
+    warningDiv.className = 'status-banner info';
+    warningDiv.innerHTML = `
+        <span>ℹ️</span>
+        <div>
+            <p>${message}</p>
+        </div>
+    `;
+    
+    // Insert at the top of main content
+    const mainContent = document.querySelector('.main-content');
+    mainContent.insertBefore(warningDiv, mainContent.firstChild);
 }
 
 // Utility: Format date
