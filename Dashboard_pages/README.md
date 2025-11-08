@@ -88,6 +88,32 @@ Dashboard_pages/
 
 ### 方法2: ローカルでテスト
 
+#### オプションA: サンプルデータでクイックスタート
+
+1. **サンプルデータを使用**
+
+   ```bash
+   cd Dashboard_pages/data
+   cp sample_prs.json prs.json
+   ```
+
+2. **ローカルサーバーを起動**
+
+   ```bash
+   cd ..
+   # Pythonの簡易サーバーを使用
+   python -m http.server 8000
+   
+   # または Node.js の http-server
+   npx http-server
+   ```
+
+3. **ブラウザでアクセス**
+
+   `http://localhost:8000` を開く
+
+#### オプションB: 実際のデータを使用
+
 1. **データを生成**
 
    ```bash

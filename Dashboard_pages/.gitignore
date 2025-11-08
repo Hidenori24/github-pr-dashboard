@@ -1,6 +1,8 @@
 # Generated data files (these are created by GitHub Actions)
+data/config.json
 data/prs.json
 data/analytics.json
+data/cache_info.json
 
 # Keep the directory structure
 !data/.gitkeep
