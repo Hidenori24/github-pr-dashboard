@@ -117,8 +117,20 @@ async function loadAllData() {
             appData.prs = await prsResponse.json();
             console.log('PRs loaded:', appData.prs.length);
         } else {
-            console.warn('PR data not found');
-            appData.prs = [];
+            console.warn('PR data not found, trying sample data');
+            // Try to load sample data as fallback
+            try {
+                const sampleResponse = await fetch(`${CONFIG.dataSource.basePath}sample_prs.json`);
+                if (sampleResponse.ok) {
+                    appData.prs = await sampleResponse.json();
+                    console.log('Sample PRs loaded:', appData.prs.length);
+                } else {
+                    appData.prs = [];
+                }
+            } catch (e) {
+                console.warn('Sample data also not found');
+                appData.prs = [];
+            }
         }
         
         // Load analytics data

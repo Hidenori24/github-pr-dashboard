@@ -8,10 +8,11 @@ on:
   # Allow manual trigger
   workflow_dispatch:
   
-  # Run on push to main branch (optional)
+  # Run on push to main or PR branch (optional)
   push:
     branches:
       - main
+      - 'copilot/**'
     paths:
       - 'Dashboard_pages/**'
       - 'dashboard/**'
