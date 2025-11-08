@@ -3,9 +3,9 @@
 # 複数のリポジトリを管理する場合はここに追加
 REPOSITORIES = [
     {
-        "name": "Streamlit",  # 表示名
-        "owner": "streamlit",
-        "repo": "streamlit"
+        "name": "GitHub PR Dashboard",  # 表示名
+        "owner": "Hidenori24",
+        "repo": "github-pr-dashboard"
     },
     # 追加例:
     # {

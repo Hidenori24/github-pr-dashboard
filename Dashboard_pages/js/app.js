@@ -11,6 +11,11 @@ let appData = {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing GitHub PR Dashboard...');
     
+    // Initialize i18n
+    if (typeof i18n !== 'undefined') {
+        i18n.init();
+    }
+    
     // Setup navigation
     setupNavigation();
     
@@ -25,6 +30,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     console.log('Dashboard initialized successfully');
 });
+
+// Toggle language between Japanese and English
+function toggleLanguage() {
+    if (typeof i18n !== 'undefined') {
+        const newLang = i18n.currentLang === 'ja' ? 'en' : 'ja';
+        i18n.setLanguage(newLang);
+    }
+}
 
 // Setup navigation between pages
 function setupNavigation() {
@@ -149,7 +162,8 @@ async function loadAllData() {
         
     } catch (error) {
         console.error('Error loading data:', error);
-        showError('データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。');
+        const errorMsg = typeof i18n !== 'undefined' ? i18n.t('error.data_load') : 'データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。';
+        showError(errorMsg);
     }
 }
 

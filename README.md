@@ -26,6 +26,8 @@ PRの状態、レビュー状況、ボトルネックを直感的に可視化し
 
 👉 **GitHub Pages版の使い方は [Dashboard_pages/README.md](Dashboard_pages/README.md) を参照してください**
 
+🌐 **[デモサイト (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/)** でこのリポジトリのPRダッシュボードを確認できます！
+
 ## ディレクトリ構成
 
 ```

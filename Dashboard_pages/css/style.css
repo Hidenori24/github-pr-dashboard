@@ -46,11 +46,38 @@ body {
     overflow-y: auto;
 }
 
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
 .sidebar-header h1 {
     font-size: 1.5rem;
     font-weight: 600;
     color: var(--text-color);
-    margin-bottom: 2rem;
+}
+
+.lang-toggle {
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.lang-toggle:hover {
+    background-color: #0056a8;
+    transform: scale(1.05);
+}
+
+.lang-toggle:active {
+    transform: scale(0.95);
 }
 
 .primary-repo {
