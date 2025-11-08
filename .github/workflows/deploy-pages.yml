@@ -52,12 +52,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd dashboard
-          python fetch_data.py --all
+          python fetch_data.py --all || echo "Data fetch failed, will use existing cache or sample data"
+        continue-on-error: true
       
       - name: Generate static data for Pages
         run: |
           cd Dashboard_pages
-          python generate_data.py
+          python generate_data.py || echo "Data generation failed, will use sample data"
+        continue-on-error: true
       
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
