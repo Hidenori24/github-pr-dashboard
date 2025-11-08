@@ -5,6 +5,8 @@ GitHubのPull Requestを可視化・分析するStreamlitダッシュボード
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
+日本語 | [English](README_EN.md)
+
 PRの状態、レビュー状況、ボトルネックを直感的に可視化し、開発チームの生産性向上を支援します。
 
 ## ディレクトリ構成

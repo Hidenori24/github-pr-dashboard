@@ -2,6 +2,8 @@
 
 GitHubのPRを可視化・分析する統合Streamlitダッシュボード
 
+日本語 | [English](README_EN.md)
+
 ## 主な機能
 
 - マルチリポジトリ対応
