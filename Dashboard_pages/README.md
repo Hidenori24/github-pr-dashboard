@@ -65,19 +65,41 @@ Dashboard_pages/
    - Source: `GitHub Actions` を選択
    - Save
 
-3. **GitHub Tokenを設定**
+3. **GitHub Tokenと権限の設定**
 
-   デフォルトの `GITHUB_TOKEN` が自動的に使用されます。
-   プライベートリポジトリや追加の権限が必要な場合は、Personal Access Tokenを作成:
-   - Settings > Secrets and variables > Actions
-   - New repository secret
-   - Name: `GH_PAT`
-   - Value: あなたのPersonal Access Token
+   **⚠️ 重要: Actions権限の確認**
    
-   そして `.github/workflows/deploy-pages.yml` を更新:
+   デフォルトの `GITHUB_TOKEN` はパブリックリポジトリのPRデータ取得に使用できます。
+   
+   **必要な権限:**
+   - `contents: read` - リポジトリのチェックアウト（デフォルトで有効）
+   - `pages: write` - GitHub Pagesへのデプロイ（ワークフローで設定済み）
+   - `id-token: write` - GitHub Pagesの認証（ワークフローで設定済み）
+   
+   **以下の場合はPersonal Access Token (PAT) が必要です:**
+   - プライベートリポジトリのPRデータを取得する場合
+   - 組織のリポジトリで追加の権限が必要な場合
+   - デフォルトの `GITHUB_TOKEN` の権限が不足している場合
+   
+   **PATの作成方法:**
+   1. GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)
+   2. "Generate new token (classic)" をクリック
+   3. 必要なスコープを選択:
+      - `repo` (プライベートリポジトリの場合)
+      - `public_repo` (パブリックリポジトリの場合)
+   4. トークンを生成してコピー
+   
+   **PATの設定:**
+   - リポジトリの Settings > Secrets and variables > Actions
+   - "New repository secret" をクリック
+   - Name: `GH_PAT`
+   - Value: 生成したPersonal Access Token
+   
+   そして `.github/workflows/deploy-pages.yml` の50-52行目を更新:
    ```yaml
-   env:
-     GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+   - name: Fetch PR data from GitHub API
+     env:
+       GITHUB_TOKEN: ${{ secrets.GH_PAT }}  # ← secrets.GITHUB_TOKEN から変更
    ```
 
 4. **ワークフローを実行**
@@ -254,9 +276,27 @@ DevOps Four Keysメトリクスの測定機能（今後実装予定）
 
 ### GitHub Actionsが失敗する
 
-1. `GITHUB_TOKEN` の権限を確認
-2. `dashboard/config.py` のリポジトリ設定を確認
-3. rate limitに達していないか確認
+**症状:** "Fetch PR data from GitHub API" ステップが失敗する
+
+**原因と対処法:**
+
+1. **権限不足の場合**
+   - エラーメッセージに "403 Forbidden" や "Resource not accessible by integration" が含まれる
+   - **対処:** Personal Access Token (PAT) を作成して設定（上記の「GitHub Tokenと権限の設定」を参照）
+   - パブリックリポジトリでも、組織のリポジトリでは追加権限が必要な場合があります
+
+2. **リポジトリ設定の確認**
+   - `dashboard/config.py` のリポジトリ名・オーナー名が正しいか確認
+   - リポジトリが存在し、アクセス可能か確認
+
+3. **Rate Limitの確認**
+   - GitHub APIのrate limitに達していないか確認
+   - デフォルトの `GITHUB_TOKEN` は 1,000 requests/hour まで
+   - PATを使用すると 5,000 requests/hour まで増加
+
+4. **Actionsの権限設定**
+   - リポジトリの Settings > Actions > General > Workflow permissions
+   - "Read and write permissions" が必要な場合があります（通常は不要）
 
 ### ページが404エラー
 

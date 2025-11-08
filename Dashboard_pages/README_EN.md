@@ -65,19 +65,41 @@ Dashboard_pages/
    - Source: Select `GitHub Actions`
    - Save
 
-3. **Configure GitHub Token**
+3. **Configure GitHub Token and Permissions**
 
-   The default `GITHUB_TOKEN` is automatically used.
-   For private repositories or additional permissions, create a Personal Access Token:
-   - Settings > Secrets and variables > Actions
-   - New repository secret
-   - Name: `GH_PAT`
-   - Value: Your Personal Access Token
+   **⚠️ Important: Check Actions Permissions**
    
-   Then update `.github/workflows/deploy-pages.yml`:
+   The default `GITHUB_TOKEN` can be used to fetch PR data from public repositories.
+   
+   **Required Permissions:**
+   - `contents: read` - Repository checkout (enabled by default)
+   - `pages: write` - Deploy to GitHub Pages (already set in workflow)
+   - `id-token: write` - GitHub Pages authentication (already set in workflow)
+   
+   **You need a Personal Access Token (PAT) if:**
+   - Fetching PR data from private repositories
+   - Additional permissions are needed for organization repositories
+   - The default `GITHUB_TOKEN` has insufficient permissions
+   
+   **How to create a PAT:**
+   1. Go to GitHub Settings > Developer settings > Personal access tokens > Tokens (classic)
+   2. Click "Generate new token (classic)"
+   3. Select required scopes:
+      - `repo` (for private repositories)
+      - `public_repo` (for public repositories)
+   4. Generate and copy the token
+   
+   **Configure the PAT:**
+   - Go to repository Settings > Secrets and variables > Actions
+   - Click "New repository secret"
+   - Name: `GH_PAT`
+   - Value: Your generated Personal Access Token
+   
+   Then update lines 50-52 in `.github/workflows/deploy-pages.yml`:
    ```yaml
-   env:
-     GITHUB_TOKEN: ${{ secrets.GH_PAT }}
+   - name: Fetch PR data from GitHub API
+     env:
+       GITHUB_TOKEN: ${{ secrets.GH_PAT }}  # ← Changed from secrets.GITHUB_TOKEN
    ```
 
 4. **Run the Workflow**
@@ -255,9 +277,27 @@ DevOps Four Keys metrics measurement feature (to be implemented)
 
 ### GitHub Actions Failing
 
-1. Verify `GITHUB_TOKEN` permissions
-2. Check repository configuration in `dashboard/config.py`
-3. Check if rate limit has been reached
+**Symptom:** "Fetch PR data from GitHub API" step fails
+
+**Causes and Solutions:**
+
+1. **Insufficient Permissions**
+   - Error message contains "403 Forbidden" or "Resource not accessible by integration"
+   - **Solution:** Create and configure a Personal Access Token (PAT) (see "Configure GitHub Token and Permissions" above)
+   - Even for public repositories, organization repos may require additional permissions
+
+2. **Repository Configuration**
+   - Verify repository name and owner in `dashboard/config.py` are correct
+   - Confirm the repository exists and is accessible
+
+3. **Rate Limit**
+   - Check if GitHub API rate limit has been reached
+   - Default `GITHUB_TOKEN` allows 1,000 requests/hour
+   - Using PAT increases limit to 5,000 requests/hour
+
+4. **Actions Permissions Settings**
+   - Go to repository Settings > Actions > General > Workflow permissions
+   - "Read and write permissions" may be needed in some cases (usually not required)
 
 ### Page 404 Error
 
