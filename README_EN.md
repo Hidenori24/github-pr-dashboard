@@ -73,7 +73,11 @@ For detailed documentation, see `dashboard/README.md`.
 
 ## Screenshots
 
-(To be added)
+### PR Timeline
+
+![PR Timeline](images/dashboard-timeline.png)
+
+Visualize the timeline from PR creation to completion with Gantt charts. View status (OPEN/MERGED), creation time, and duration at a glance.
 
 ## License
 

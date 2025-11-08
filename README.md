@@ -64,7 +64,11 @@ streamlit run app.py
 
 ## スクリーンショット
 
-（追加予定）
+### PRタイムライン
+
+![PRタイムライン](images/dashboard-timeline.png)
+
+PRの作成から完了までの時系列をガントチャートで可視化。状態（OPEN/MERGED）、作成日時、期間を一目で把握できます。
 
 ## ライセンス
 
