@@ -40,9 +40,9 @@ const CONFIG = {
     // These can be overridden by data/config.json
     repositories: [
         {
-            name: "Streamlit",
-            owner: "streamlit",
-            repo: "streamlit"
+            name: "GitHub PR Dashboard",
+            owner: "Hidenori24",
+            repo: "github-pr-dashboard"
         }
     ],
     

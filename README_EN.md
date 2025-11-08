@@ -1,6 +1,6 @@
 # GitHub PR Dashboard
 
-A Streamlit-based dashboard for visualizing and analyzing GitHub Pull Requests
+A dashboard for visualizing and analyzing GitHub Pull Requests
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -8,6 +8,25 @@ A Streamlit-based dashboard for visualizing and analyzing GitHub Pull Requests
 [日本語](README.md) | English
 
 Visualize PR status, review progress, and bottlenecks intuitively to improve your development team's productivity.
+
+## 🎯 Two Versions
+
+This repository provides two implementations:
+
+1. **[Streamlit Version](dashboard/)** - Python-based dashboard running on local PC
+2. **[GitHub Pages Version](Dashboard_pages/)** - Static web application that can be published on GitHub Pages (🆕 Recommended)
+
+| Feature | Streamlit Version | **GitHub Pages Version** |
+|---------|------------------|--------------------------|
+| Runtime | Local PC | **Cloud (Free)** |
+| Setup | Python environment required | **Not required (Browser only)** |
+| Auto Update | Manual setup | **GitHub Actions (Automatic)** |
+| Access | localhost | **Public URL** |
+| Team Sharing | Difficult | **Easy (Share URL)** |
+
+👉 **For GitHub Pages version usage, see [Dashboard_pages/README.md](Dashboard_pages/README.md)**
+
+🌐 **Check out the [Live Demo (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/)** to see the PR dashboard for this repository!
 
 ## Key Features
 

@@ -7,13 +7,15 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
 </head>
 <body>
     <div class="app-container">
         <!-- Sidebar -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1>GitHub PR Tools</h1>
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
             </div>
             
             <div class="sidebar-content">
@@ -24,19 +26,19 @@
                 <nav class="sidebar-nav">
                     <a href="#home" class="nav-item active" data-page="home">
                         <span class="nav-icon">🏠</span>
-                        <span class="nav-label">ホーム</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
                     </a>
                     <a href="#dashboard" class="nav-item" data-page="dashboard">
                         <span class="nav-icon">📊</span>
-                        <span class="nav-label">PRダッシュボード</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
                     </a>
                     <a href="#analytics" class="nav-item" data-page="analytics">
                         <span class="nav-icon">📈</span>
-                        <span class="nav-label">PR分析</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
                     </a>
                     <a href="#fourkeys" class="nav-item" data-page="fourkeys">
                         <span class="nav-icon">🔑</span>
-                        <span class="nav-label">Four Keys</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
                     </a>
                 </nav>
             </div>
@@ -46,30 +48,30 @@
         <main class="main-content">
             <!-- Home Page -->
             <div id="page-home" class="page active">
-                <h1>GitHub PR Dashboard & Analytics</h1>
+                <h1 data-i18n="home.title">GitHub PR Dashboard & Analytics</h1>
                 
-                <p class="lead-text">
+                <p class="lead-text" data-i18n="home.subtitle">
                     GitHubのPRを可視化・分析する統合ダッシュボード
                 </p>
 
                 <div class="feature-cards">
                     <div class="card">
-                        <h3>主な機能</h3>
+                        <h3 data-i18n="home.features.title">主な機能</h3>
                         <ul>
-                            <li><strong>マルチリポジトリ対応</strong>: 複数リポジトリを一元管理</li>
-                            <li><strong>コメントスレッド分析</strong>: 指摘→返信→解決の流れを可視化</li>
-                            <li><strong>ボトルネック分析</strong>: 未応答時間を営業日ベースで計算</li>
-                            <li><strong>レビュワー分析</strong>: 誰がレビューに応答していないかを特定</li>
-                            <li><strong>レビュー速度分析</strong>: 作成からマージまでの時間分析</li>
-                            <li><strong>変更パターン分析</strong>: ファイル変更頻度とPR規模分析</li>
+                            <li><strong data-i18n="home.features.multi">マルチリポジトリ対応</strong>: <span data-i18n="home.features.multi.desc">複数リポジトリを一元管理</span></li>
+                            <li><strong data-i18n="home.features.comment">コメントスレッド分析</strong>: <span data-i18n="home.features.comment.desc">指摘→返信→解決の流れを可視化</span></li>
+                            <li><strong data-i18n="home.features.bottleneck">ボトルネック分析</strong>: <span data-i18n="home.features.bottleneck.desc">未応答時間を営業日ベースで計算</span></li>
+                            <li><strong data-i18n="home.features.reviewer">レビュワー分析</strong>: <span data-i18n="home.features.reviewer.desc">誰がレビューに応答していないかを特定</span></li>
+                            <li><strong data-i18n="home.features.speed">レビュー速度分析</strong>: <span data-i18n="home.features.speed.desc">作成からマージまでの時間分析</span></li>
+                            <li><strong data-i18n="home.features.pattern">変更パターン分析</strong>: <span data-i18n="home.features.pattern.desc">ファイル変更頻度とPR規模分析</span></li>
                         </ul>
                     </div>
                 </div>
 
-                <h2>設定済みリポジトリ</h2>
-                <p class="info-text">プライマリーリポジトリを選択してください</p>
+                <h2 data-i18n="home.repos.title">設定済みリポジトリ</h2>
+                <p class="info-text" data-i18n="home.repos.select">プライマリーリポジトリを選択してください</p>
                 <div id="repoList" class="repo-grid">
-                    <div class="loading">Loading repositories...</div>
+                    <div class="loading" data-i18n="home.repos.loading">Loading repositories...</div>
                 </div>
 
                 <div id="selectedRepoInfo" class="selected-repo-info"></div>
@@ -77,47 +79,47 @@
                 <hr class="divider">
 
                 <div id="cacheStatus" class="cache-status">
-                    <div class="loading">Checking cache status...</div>
+                    <div class="loading" data-i18n="home.cache.checking">Checking cache status...</div>
                 </div>
 
                 <hr class="divider">
 
                 <div class="feature-grid">
                     <div class="feature-card" data-page="dashboard">
-                        <h3>PRダッシュボード</h3>
-                        <p><strong>目的:</strong> PRの状態とファイル変更を時系列で把握</p>
-                        <h4>主な機能:</h4>
+                        <h3 data-i18n="dashboard.title">PRダッシュボード</h3>
+                        <p><strong data-i18n="dashboard.purpose">目的:</strong> <span data-i18n="dashboard.purpose.desc">PRの状態とファイル変更を時系列で把握</span></p>
+                        <h4 data-i18n="dashboard.features.title">主な機能:</h4>
                         <ul>
-                            <li><strong>PRタイムライン</strong>: ガントチャートでPRのライフサイクルを可視化</li>
-                            <li><strong>書類/コード分析</strong>: ディレクトリごとのPRタイムライン</li>
-                            <li><strong>アクション追跡</strong>: レビュー待ち/修正待ちPRの自動検出</li>
+                            <li><strong data-i18n="dashboard.timeline">PRタイムライン</strong>: <span data-i18n="dashboard.timeline.desc">ガントチャートでPRのライフサイクルを可視化</span></li>
+                            <li><strong data-i18n="dashboard.files">書類/コード分析</strong>: <span data-i18n="dashboard.files.desc">ディレクトリごとのPRタイムライン</span></li>
+                            <li><strong data-i18n="dashboard.action">アクション追跡</strong>: <span data-i18n="dashboard.action.desc">レビュー待ち/修正待ちPRの自動検出</span></li>
                         </ul>
-                        <button class="btn btn-primary" onclick="navigateToPage('dashboard')">
+                        <button class="btn btn-primary" onclick="navigateToPage('dashboard')" data-i18n="dashboard.open">
                             PRダッシュボードを開く
                         </button>
                     </div>
 
                     <div class="feature-card" data-page="analytics">
-                        <h3>PR分析</h3>
-                        <p><strong>目的:</strong> PRの統計分析と問題の早期発見</p>
-                        <h4>7つの分析タブ:</h4>
+                        <h3 data-i18n="analytics.title">PR分析</h3>
+                        <p><strong data-i18n="analytics.purpose">目的:</strong> <span data-i18n="analytics.purpose.desc">PRの統計分析と問題の早期発見</span></p>
+                        <h4 data-i18n="analytics.features.title">7つの分析タブ:</h4>
                         <ul>
-                            <li>滞留分析: OPEN PRの滞留時間分布</li>
-                            <li>ブロッカー分析: 未クローズ原因の推定</li>
-                            <li>レビュワー分析: レビューアクティビティ</li>
-                            <li>トレンド分析: 週次PR作成数推移</li>
+                            <li><span data-i18n="analytics.stagnation">滞留分析</span>: <span data-i18n="analytics.stagnation.desc">OPEN PRの滞留時間分布</span></li>
+                            <li><span data-i18n="analytics.blocker">ブロッカー分析</span>: <span data-i18n="analytics.blocker.desc">未クローズ原因の推定</span></li>
+                            <li><span data-i18n="analytics.reviewer">レビュワー分析</span>: <span data-i18n="analytics.reviewer.desc">レビューアクティビティ</span></li>
+                            <li><span data-i18n="analytics.trend">トレンド分析</span>: <span data-i18n="analytics.trend.desc">週次PR作成数推移</span></li>
                             <li>ボトルネック分析: レビュー待ち/修正待ち</li>
                             <li>レビュー速度: マージまでの時間分析</li>
                             <li>変更パターン: ファイル変更頻度</li>
                         </ul>
-                        <button class="btn btn-primary" onclick="navigateToPage('analytics')">
+                        <button class="btn btn-primary" onclick="navigateToPage('analytics')" data-i18n="analytics.open">
                             PR分析を開く
                         </button>
                     </div>
 
                     <div class="feature-card" data-page="fourkeys">
-                        <h3>Four Keys</h3>
-                        <p><strong>目的:</strong> DevOps Four Keysメトリクスの測定</p>
+                        <h3 data-i18n="fourkeys.title">Four Keys</h3>
+                        <p><span data-i18n="fourkeys.desc">DevOps Four Keysメトリクスの測定機能を準備中です</span></p>
                         <h4>4つの主要指標:</h4>
                         <ul>
                             <li><strong>Deployment Frequency</strong>: デプロイ頻度</li>
@@ -125,9 +127,9 @@
                             <li><strong>Change Failure Rate</strong>: 変更失敗率</li>
                             <li><strong>Time to Restore Service</strong>: サービス復旧時間</li>
                         </ul>
-                        <p class="dev-notice">⚠️ 現在開発中</p>
+                        <p class="dev-notice">⚠️ <span data-i18n="fourkeys.coming_soon">現在開発中</span></p>
                         <button class="btn btn-secondary" onclick="navigateToPage('fourkeys')">
-                            Four Keysを開く
+                            Four Keys
                         </button>
                     </div>
                 </div>
