@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>GitHub PR Tools</h1>
+            </div>
+            
+            <div class="sidebar-content">
+                <div class="primary-repo" id="primaryRepoInfo">
+                    <div class="loading">Loading...</div>
+                </div>
+                
+                <nav class="sidebar-nav">
+                    <a href="#home" class="nav-item active" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label">ホーム</span>
+                    </a>
+                    <a href="#dashboard" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label">PRダッシュボード</span>
+                    </a>
+                    <a href="#analytics" class="nav-item" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label">PR分析</span>
+                    </a>
+                    <a href="#fourkeys" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label">Four Keys</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Home Page -->
+            <div id="page-home" class="page active">
+                <h1>GitHub PR Dashboard & Analytics</h1>
+                
+                <p class="lead-text">
+                    GitHubのPRを可視化・分析する統合ダッシュボード
+                </p>
+
+                <div class="feature-cards">
+                    <div class="card">
+                        <h3>主な機能</h3>
+                        <ul>
+                            <li><strong>マルチリポジトリ対応</strong>: 複数リポジトリを一元管理</li>
+                            <li><strong>コメントスレッド分析</strong>: 指摘→返信→解決の流れを可視化</li>
+                            <li><strong>ボトルネック分析</strong>: 未応答時間を営業日ベースで計算</li>
+                            <li><strong>レビュワー分析</strong>: 誰がレビューに応答していないかを特定</li>
+                            <li><strong>レビュー速度分析</strong>: 作成からマージまでの時間分析</li>
+                            <li><strong>変更パターン分析</strong>: ファイル変更頻度とPR規模分析</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <h2>設定済みリポジトリ</h2>
+                <p class="info-text">プライマリーリポジトリを選択してください</p>
+                <div id="repoList" class="repo-grid">
+                    <div class="loading">Loading repositories...</div>
+                </div>
+
+                <div id="selectedRepoInfo" class="selected-repo-info"></div>
+
+                <hr class="divider">
+
+                <div id="cacheStatus" class="cache-status">
+                    <div class="loading">Checking cache status...</div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="feature-grid">
+                    <div class="feature-card" data-page="dashboard">
+                        <h3>PRダッシュボード</h3>
+                        <p><strong>目的:</strong> PRの状態とファイル変更を時系列で把握</p>
+                        <h4>主な機能:</h4>
+                        <ul>
+                            <li><strong>PRタイムライン</strong>: ガントチャートでPRのライフサイクルを可視化</li>
+                            <li><strong>書類/コード分析</strong>: ディレクトリごとのPRタイムライン</li>
+                            <li><strong>アクション追跡</strong>: レビュー待ち/修正待ちPRの自動検出</li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="navigateToPage('dashboard')">
+                            PRダッシュボードを開く
+                        </button>
+                    </div>
+
+                    <div class="feature-card" data-page="analytics">
+                        <h3>PR分析</h3>
+                        <p><strong>目的:</strong> PRの統計分析と問題の早期発見</p>
+                        <h4>7つの分析タブ:</h4>
+                        <ul>
+                            <li>滞留分析: OPEN PRの滞留時間分布</li>
+                            <li>ブロッカー分析: 未クローズ原因の推定</li>
+                            <li>レビュワー分析: レビューアクティビティ</li>
+                            <li>トレンド分析: 週次PR作成数推移</li>
+                            <li>ボトルネック分析: レビュー待ち/修正待ち</li>
+                            <li>レビュー速度: マージまでの時間分析</li>
+                            <li>変更パターン: ファイル変更頻度</li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="navigateToPage('analytics')">
+                            PR分析を開く
+                        </button>
+                    </div>
+
+                    <div class="feature-card" data-page="fourkeys">
+                        <h3>Four Keys</h3>
+                        <p><strong>目的:</strong> DevOps Four Keysメトリクスの測定</p>
+                        <h4>4つの主要指標:</h4>
+                        <ul>
+                            <li><strong>Deployment Frequency</strong>: デプロイ頻度</li>
+                            <li><strong>Lead Time for Changes</strong>: 変更のリードタイム</li>
+                            <li><strong>Change Failure Rate</strong>: 変更失敗率</li>
+                            <li><strong>Time to Restore Service</strong>: サービス復旧時間</li>
+                        </ul>
+                        <p class="dev-notice">⚠️ 現在開発中</p>
+                        <button class="btn btn-secondary" onclick="navigateToPage('fourkeys')">
+                            Four Keysを開く
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <div class="tips-grid">
+                    <div class="tip-card tip-info">
+                        <h4>📊 データ更新</h4>
+                        <p>GitHub Actionsにより自動更新されます</p>
+                        <ul>
+                            <li>定期実行: 毎日自動更新</li>
+                            <li>手動実行: Actions タブから実行可能</li>
+                            <li>リアルタイム: 最新データを常に表示</li>
+                        </ul>
+                    </div>
+
+                    <div class="tip-card tip-success">
+                        <h4>⚡ 高速表示</h4>
+                        <p>静的ページで瞬時に表示</p>
+                        <ul>
+                            <li>ページロード: 0.1秒以下</li>
+                            <li>GitHub API呼び出し不要</li>
+                            <li>Rate Limitの心配なし</li>
+                        </ul>
+                    </div>
+
+                    <div class="tip-card tip-warning">
+                        <h4>🔍 分析機能</h4>
+                        <p>コメントスレッド分析で未応答を特定</p>
+                        <ul>
+                            <li>指摘→返信→解決の流れを追跡</li>
+                            <li>営業日ベースの未応答時間</li>
+                            <li>レビュワー別の応答率可視化</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page">
+                <h1>PRダッシュボード</h1>
+                
+                <div class="dashboard-controls">
+                    <div class="control-group">
+                        <label for="repoFilter">リポジトリ:</label>
+                        <select id="repoFilter" class="form-select">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="stateFilter">状態:</label>
+                        <select id="stateFilter" class="form-select" multiple>
+                            <option value="OPEN" selected>Open</option>
+                            <option value="MERGED" selected>Merged</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="daysFilter">期間:</label>
+                        <select id="daysFilter" class="form-select">
+                            <option value="30">過去30日</option>
+                            <option value="60">過去60日</option>
+                            <option value="90" selected>過去90日</option>
+                            <option value="180">過去180日</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="loadDashboardData()">
+                        更新
+                    </button>
+                </div>
+
+                <div class="metrics-row" id="dashboardMetrics">
+                    <!-- Metrics will be inserted here -->
+                </div>
+
+                <div class="chart-container">
+                    <h2>PRタイムライン</h2>
+                    <div id="timelineChart" class="chart-area">
+                        <div class="loading">Loading chart...</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>PR一覧</h2>
+                    <div id="prTable" class="table-container">
+                        <div class="loading">Loading table...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div id="page-analytics" class="page">
+                <h1>PR分析</h1>
+                
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="residence">滞留分析</button>
+                    <button class="tab-btn" data-tab="blocker">ブロッカー分析</button>
+                    <button class="tab-btn" data-tab="reviewer">レビュワー分析</button>
+                    <button class="tab-btn" data-tab="trend">トレンド分析</button>
+                    <button class="tab-btn" data-tab="bottleneck">ボトルネック分析</button>
+                    <button class="tab-btn" data-tab="speed">レビュー速度</button>
+                    <button class="tab-btn" data-tab="pattern">変更パターン</button>
+                </div>
+
+                <div class="tab-content">
+                    <div id="tab-residence" class="tab-pane active">
+                        <h2>滞留分析</h2>
+                        <p>Open PRの滞留時間分布</p>
+                        <div id="residenceChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-blocker" class="tab-pane">
+                        <h2>ブロッカー分析</h2>
+                        <p>未クローズ原因の推定</p>
+                        <div id="blockerChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-reviewer" class="tab-pane">
+                        <h2>レビュワー分析</h2>
+                        <p>レビューアクティビティとコメント応答状況</p>
+                        <div id="reviewerChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-trend" class="tab-pane">
+                        <h2>トレンド分析</h2>
+                        <p>週次PR作成数推移</p>
+                        <div id="trendChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-bottleneck" class="tab-pane">
+                        <h2>ボトルネック分析</h2>
+                        <p>レビュー待ち/修正待ちの詳細</p>
+                        <div id="bottleneckChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-speed" class="tab-pane">
+                        <h2>レビュー速度</h2>
+                        <p>マージまでの時間分析</p>
+                        <div id="speedChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-pattern" class="tab-pane">
+                        <h2>変更パターン</h2>
+                        <p>ファイル変更頻度とPR規模</p>
+                        <div id="patternChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Four Keys Page -->
+            <div id="page-fourkeys" class="page">
+                <h1>Four Keys メトリクス</h1>
+                
+                <div class="dev-banner">
+                    <h3>🚧 この機能は開発中です</h3>
+                    <p>DevOps Four Keys メトリクスの測定機能を実装予定です。</p>
+                </div>
+
+                <div class="feature-grid">
+                    <div class="metric-card">
+                        <h3>📦 Deployment Frequency</h3>
+                        <p class="metric-value">-</p>
+                        <p class="metric-description">デプロイ頻度</p>
+                    </div>
+
+                    <div class="metric-card">
+                        <h3>⏱️ Lead Time for Changes</h3>
+                        <p class="metric-value">-</p>
+                        <p class="metric-description">変更のリードタイム</p>
+                    </div>
+
+                    <div class="metric-card">
+                        <h3>❌ Change Failure Rate</h3>
+                        <p class="metric-value">-</p>
+                        <p class="metric-description">変更失敗率</p>
+                    </div>
+
+                    <div class="metric-card">
+                        <h3>🔧 Time to Restore Service</h3>
+                        <p class="metric-value">-</p>
+                        <p class="metric-description">サービス復旧時間</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/analytics.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# Generated data files (these are created by GitHub Actions)
+data/config.json
+data/prs.json
+data/analytics.json
+data/cache_info.json
+
+# Keep the directory structure
+!data/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
