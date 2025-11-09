@@ -64,8 +64,15 @@ const i18n = {
             
             // Four Keys
             'fourkeys.title': 'Four Keys',
-            'fourkeys.coming_soon': '開発中',
-            'fourkeys.desc': 'DevOps Four Keysメトリクスの測定機能を準備中です',
+            'fourkeys.purpose': '目的:',
+            'fourkeys.purpose.desc': 'DevOps Research and Assessment (DORA) の主要指標でソフトウェア開発のパフォーマンスを測定',
+            'fourkeys.features.title': '4つの主要指標:',
+            'fourkeys.deployment': 'デプロイ頻度 - 週あたりのデプロイ回数',
+            'fourkeys.leadtime': '変更のリードタイム - PR作成からマージまでの時間',
+            'fourkeys.failure': '変更失敗率 - 失敗PRの割合',
+            'fourkeys.mttr': 'サービス復旧時間 (MTTR) - 問題解決までの時間',
+            'fourkeys.open': 'Four Keysを開く',
+            'fourkeys.subtitle': 'DevOps Research and Assessment (DORA) の 4つの主要指標でソフトウェア開発のパフォーマンスを測定',
             
             // Common
             'loading': '読み込み中...',
@@ -131,8 +138,15 @@ const i18n = {
             
             // Four Keys
             'fourkeys.title': 'Four Keys',
-            'fourkeys.coming_soon': 'Coming Soon',
-            'fourkeys.desc': 'DevOps Four Keys metrics measurement feature is in development',
+            'fourkeys.purpose': 'Purpose:',
+            'fourkeys.purpose.desc': 'Measure software development performance using DevOps Research and Assessment (DORA) key metrics',
+            'fourkeys.features.title': 'Four Key Metrics:',
+            'fourkeys.deployment': 'Deployment frequency - Number of deployments per week',
+            'fourkeys.leadtime': 'Lead time for changes - Time from PR creation to merge',
+            'fourkeys.failure': 'Change failure rate - Percentage of failed PRs',
+            'fourkeys.mttr': 'Time to restore service (MTTR) - Time to resolve issues',
+            'fourkeys.open': 'Open Four Keys',
+            'fourkeys.subtitle': 'Measure software development performance using the 4 key metrics from DevOps Research and Assessment (DORA)',
             
             // Common
             'loading': 'Loading...',
