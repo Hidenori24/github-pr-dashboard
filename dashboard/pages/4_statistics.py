@@ -113,6 +113,7 @@ else:
 JST = ZoneInfo("Asia/Tokyo")
 
 
+# NOTE: This function is defined for potential future use and may also be imported by other modules.
 def calculate_business_hours(start_dt: datetime, end_dt: datetime) -> float:
     """営業日（平日のみ）で経過時間を計算（時間単位）"""
     if pd.isna(start_dt) or pd.isna(end_dt):
