@@ -1484,3 +1484,301 @@ tbody tr:hover {
     align-items: center;
     gap: 0.5rem;
 }
+
+/* ===== Statistics Page Styles ===== */
+
+/* Statistics Controls */
+.statistics-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--card-bg);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.form-select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: border-color var(--transition-speed) ease;
+}
+
+.form-select:hover {
+    border-color: var(--secondary-color);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--secondary-color);
+    box-shadow: 0 0 0 3px rgba(0, 104, 201, 0.1);
+}
+
+/* Statistics Summary */
+.statistics-summary {
+    margin-bottom: 2rem;
+}
+
+.statistics-summary h2 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+/* Metric Delta */
+.metric-delta {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.metric-delta.positive {
+    color: var(--success-color);
+}
+
+.metric-delta.negative {
+    color: var(--primary-color);
+}
+
+.metric-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 0.25rem;
+}
+
+/* Charts Section */
+.statistics-charts,
+.statistics-trends {
+    margin-bottom: 2rem;
+}
+
+.chart-row {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.chart-container {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+}
+
+.chart-container.half-width {
+    /* Already sized by grid */
+}
+
+.chart-container h3 {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.chart-placeholder {
+    min-height: 300px;
+}
+
+/* Review Metrics */
+.review-metrics {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+    padding: 1rem;
+}
+
+.review-metric-item {
+    text-align: center;
+}
+
+.review-metric-item .metric-label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+}
+
+.review-metric-item .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-color);
+    margin: 0.5rem 0;
+}
+
+.review-metric-item .metric-sub {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+/* Insights Section */
+.statistics-insights,
+.statistics-recommendations {
+    margin-bottom: 2rem;
+}
+
+.statistics-insights h2,
+.statistics-recommendations h2 {
+    margin-bottom: 1rem;
+    color: var(--text-color);
+}
+
+.insights-container,
+.recommendations-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Insight Cards */
+.insight-card {
+    background: linear-gradient(135deg, var(--card-bg) 0%, var(--hover-bg) 100%);
+    border-left: 4px solid var(--info-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.5s ease;
+}
+
+.success-insight {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-left: 4px solid var(--success-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.5s ease;
+}
+
+[data-theme="dark"] .success-insight {
+    background: linear-gradient(135deg, #14532d22 0%, #16a34a22 100%);
+}
+
+.warning-insight {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+    border-left: 4px solid var(--primary-color);
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    animation: fadeIn 0.5s ease;
+}
+
+[data-theme="dark"] .warning-insight {
+    background: linear-gradient(135deg, #7c2d1222 0%, #dc262622 100%);
+}
+
+.insight-card h4,
+.success-insight h4,
+.warning-insight h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.insight-card p,
+.success-insight p,
+.warning-insight p {
+    margin: 0;
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+/* Recommendation Cards */
+.recommendation-card {
+    background: var(--card-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow);
+    transition: transform var(--transition-speed) ease;
+}
+
+.recommendation-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.recommendation-card h4 {
+    margin: 0 0 1rem 0;
+    font-size: 1.1rem;
+    color: var(--text-color);
+}
+
+.recommendation-actions {
+    color: var(--text-color);
+}
+
+.recommendation-actions strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-color);
+}
+
+.recommendation-actions ul {
+    margin: 0.5rem 0 0 1.5rem;
+    color: var(--text-secondary);
+}
+
+.recommendation-actions li {
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+/* Info and Success Messages */
+.info-message {
+    padding: 1.5rem;
+    background: rgba(0, 192, 242, 0.13);
+    border-left: 4px solid var(--info-color);
+    border-radius: 8px;
+    color: var(--text-color);
+}
+
+.success-message {
+    padding: 1.5rem;
+    background: rgba(33, 195, 84, 0.13);
+    border-left: 4px solid var(--success-color);
+    border-radius: 8px;
+    color: var(--text-color);
+}
+
+/* Responsive Design for Statistics */
+@media (max-width: 768px) {
+    .statistics-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .control-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .form-select {
+        width: 100%;
+    }
+    
+    .chart-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .review-metrics {
+        grid-template-columns: 1fr;
+    }
+}

@@ -87,7 +87,44 @@ For detailed documentation, see `dashboard/README.md`.
 - **Bottleneck Analysis**: Auto-detect PRs awaiting review/fixes (business day-based)
 - **Reviewer Analysis**: Identify non-responsive reviewers
 - **Comment Thread Analysis**: Track feedback → response → resolution flow
+- **Statistics & Weekly Reports**: Statistical analysis and automated improvement recommendations
 - **Fast Display**: Local cache enables sub-0.1 second display speeds
+
+## Statistics & Weekly Reports
+
+Provides comprehensive statistics to understand current development processes and find opportunities for improvement.
+
+### Key Metrics
+
+- **Period Summary**: Total PRs, merge rate, average lead time, active developers
+- **Trend Analysis**: 8-week trends for PR creation and average lead time
+- **Review Activity**: Total reviews, total comments, averages per PR
+
+### Automated Insights
+
+Automatically generates insights from statistical data:
+
+- Detection of increased/decreased development activity
+- Analysis of improved/delayed review speed
+- Merge rate evaluation
+- Review activity monitoring
+- Stale PR warnings
+
+### Improvement Recommendations
+
+Provides specific action items based on current issues:
+
+- Methods to reduce review time
+- Fostering review culture
+- Strategies to improve PR completion rate
+- Promoting team collaboration
+
+### Weekly Report Export
+
+- Export reports in Markdown format
+- Summary of key metrics
+- Comparison with previous week
+- List of improvement recommendations
 
 ## Screenshots
 
