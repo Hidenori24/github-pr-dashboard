@@ -25,11 +25,11 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    # ここで GraphQL エンドポイントを上書きすることで 404 を防ぐ
     env:
       GITHUB_TOKEN: ${{ github.token }}
-      # 空にして fallback を使う場合は "" に、明示するなら以下:
+      # GraphQL エンドポイントを明示 (fetcher.py で正規化される前提でも安全側で指定)
       GITHUB_API_URL: https://api.github.com/graphql
+      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout repository
@@ -39,17 +39,34 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
 
       - name: Install dependencies
         run: |
-            pip install -r requirements.txt
+          pip install -r requirements.txt
+
+      - name: Debug environment
+        run: |
+          echo "GITHUB_API_URL=$GITHUB_API_URL"
+          echo "Python version: $(python -V)"
+          python - <<'PY'
+import os, sys
+print("Runtime GITHUB_API_URL:", os.getenv("GITHUB_API_URL"))
+# fetcher モジュールのパス確認
+try:
+    sys.path.insert(0, "dashboard")
+    import fetcher
+    print("fetcher module path:", fetcher.__file__)
+    print("fetcher.API_URL_DEFAULT (if defined):", getattr(fetcher, "API_URL_DEFAULT", "<not set>"))
+except Exception as e:
+    print("Fetcher import error:", e)
+PY
 
       - name: Fetch PR data from GitHub API
         working-directory: dashboard
         run: |
           python fetch_data.py --all
-        # continue-on-error を外して失敗を正しく検出
-      
+
       - name: Generate static data for Pages
         working-directory: Dashboard_pages
         run: |
@@ -57,8 +74,18 @@ jobs:
 
       - name: Validate generated files
         run: |
-          test -f Dashboard_pages/config.json
-          test -f Dashboard_pages/prs.json || echo "prs.json missing (possibly no PRs)"
+          # config.json / prs.json / 他の生成物が data/ 下にある前提
+          ls -al Dashboard_pages/data || (echo "data directory missing" && exit 1)
+          test -f Dashboard_pages/data/config.json
+          test -f Dashboard_pages/data/prs.json
+          test -f Dashboard_pages/data/cache_info.json || echo "cache_info.json not found (non-fatal)"
+          test -f Dashboard_pages/data/analytics.json || echo "analytics.json not found (non-fatal)"
+        # ここで失敗したら deploy ジョブには進まない
+
+      - name: (Optional) Flatten data for legacy front-end
+        if: ${{ always() && false }} # 必要なら true にして有効化
+        run: |
+          cp Dashboard_pages/data/*.json Dashboard_pages/
 
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
