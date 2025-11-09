@@ -167,6 +167,25 @@ async function loadAllData() {
                 retries: 2
             });
             console.log('PRs loaded:', appData.prs.length);
+            
+            // Check if prs.json is empty and fall back to sample data
+            if (!appData.prs || appData.prs.length === 0) {
+                console.warn('PR data is empty, trying sample data');
+                try {
+                    appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}sample_prs.json`, {
+                        timeout: 5000,
+                        retries: 1
+                    });
+                    console.log('Sample PRs loaded:', appData.prs.length);
+                    showWarning(typeof i18n !== 'undefined' ? 
+                        'Using sample data. GitHub Actions may not have generated real data yet.' :
+                        'サンプルデータを使用しています。GitHub Actionsがまだ実データを生成していない可能性があります。');
+                } catch (e) {
+                    console.warn('Sample data also not found:', e.message);
+                    appData.prs = [];
+                    loadingErrors.push('PR data');
+                }
+            }
         } catch (error) {
             console.warn('PR data not found, trying sample data:', error.message);
             // Try to load sample data as fallback
