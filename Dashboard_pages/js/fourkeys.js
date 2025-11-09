@@ -38,17 +38,24 @@ function displayFourKeysMetrics() {
         return;
     }
     
-    // Remove dev banner
-    const devBanner = document.querySelector('.dev-banner');
+    // Hide dev banner with fade animation
+    const devBanner = document.getElementById('fourkeys-dev-banner');
     if (devBanner) {
-        devBanner.remove();
+        devBanner.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        devBanner.style.opacity = '0';
+        devBanner.style.transform = 'translateY(-20px)';
+        setTimeout(() => {
+            devBanner.style.display = 'none';
+        }, 500);
     }
     
-    // Update metric cards
-    updateMetricCard('deployment-frequency', fourkeysData.metrics.deploymentFrequency);
-    updateMetricCard('lead-time', fourkeysData.metrics.leadTime);
-    updateMetricCard('change-failure-rate', fourkeysData.metrics.changeFailureRate);
-    updateMetricCard('mttr', fourkeysData.metrics.mttr);
+    // Update metric cards with animation
+    setTimeout(() => {
+        updateMetricCard('deployment-frequency', fourkeysData.metrics.deploymentFrequency);
+        updateMetricCard('lead-time', fourkeysData.metrics.leadTime);
+        updateMetricCard('change-failure-rate', fourkeysData.metrics.changeFailureRate);
+        updateMetricCard('mttr', fourkeysData.metrics.mttr);
+    }, 100);
     
     // Create detailed visualizations
     try {
@@ -69,42 +76,46 @@ function updateMetricCard(metricId, metricData) {
     const value = metricData.value;
     const unit = metricData.unit;
     
-    card.style.borderLeft = `4px solid ${classification.color}`;
-    card.style.background = `${classification.color}22`;
+    // Update card appearance with gradient
+    card.style.borderTop = `4px solid ${classification.color}`;
     
     const valueElement = card.querySelector('.metric-value');
+    const unitElement = card.querySelector('.metric-unit');
+    
     if (valueElement) {
+        valueElement.classList.remove('loading');
+        valueElement.style.color = classification.color;
+        
         if (unit === 'percent') {
-            valueElement.textContent = `${value.toFixed(1)}%`;
+            valueElement.textContent = value.toFixed(1);
+            if (unitElement) unitElement.textContent = '%';
         } else if (unit === 'per week') {
-            valueElement.textContent = `${value.toFixed(1)} /週`;
+            valueElement.textContent = value.toFixed(1);
+            if (unitElement) unitElement.textContent = '/週';
         } else if (unit === 'days') {
-            valueElement.textContent = `${value.toFixed(1)} 日`;
+            valueElement.textContent = value.toFixed(1);
+            if (unitElement) unitElement.textContent = '日';
         } else if (unit === 'hours') {
-            valueElement.textContent = `${value.toFixed(1)} 時間`;
+            valueElement.textContent = value.toFixed(1);
+            if (unitElement) unitElement.textContent = '時間';
         } else {
             valueElement.textContent = value.toFixed(1);
+            if (unitElement) unitElement.textContent = '';
         }
     }
     
-    // Add DORA level badge
-    const descElement = card.querySelector('.metric-description');
-    if (descElement) {
-        const levelBadge = document.createElement('div');
-        levelBadge.className = 'dora-level-badge';
-        levelBadge.style.color = classification.color;
-        levelBadge.style.fontWeight = 'bold';
-        levelBadge.style.marginTop = '0.5rem';
-        levelBadge.textContent = `DORA Level: ${classification.level}`;
-        
-        // Check if badge already exists
-        const existingBadge = card.querySelector('.dora-level-badge');
-        if (existingBadge) {
-            existingBadge.replaceWith(levelBadge);
-        } else {
-            descElement.after(levelBadge);
-        }
+    // Add/update DORA level badge
+    let badgeElement = card.querySelector('.metric-badge');
+    if (!badgeElement) {
+        badgeElement = document.createElement('div');
+        badgeElement.className = 'metric-badge';
+        card.querySelector('.metric-card-body').appendChild(badgeElement);
     }
+    
+    badgeElement.style.background = `${classification.color}22`;
+    badgeElement.style.color = classification.color;
+    badgeElement.style.border = `2px solid ${classification.color}`;
+    badgeElement.textContent = `DORA Level: ${classification.level}`;
 }
 
 // Create metrics info without charts (fallback when Plotly is not available)

@@ -299,43 +299,90 @@
 
             <!-- Four Keys Page -->
             <div id="page-fourkeys" class="page">
-                <h1 data-i18n="fourkeys.title">Four Keys メトリクス</h1>
+                <div class="page-header">
+                    <h1 data-i18n="fourkeys.title">🔑 Four Keys メトリクス</h1>
+                    <p class="page-subtitle" data-i18n="fourkeys.subtitle">
+                        DevOps Research and Assessment (DORA) の 4つの主要指標でソフトウェア開発のパフォーマンスを測定
+                    </p>
+                </div>
                 
-                <p class="lead-text" data-i18n="fourkeys.subtitle">
-                    DevOps Four Keys メトリクスでソフトウェア開発のパフォーマンスを測定します
-                </p>
-                
-                <div class="dev-banner">
-                    <h3>🚧 この機能は開発中です</h3>
-                    <p>DevOps Four Keys メトリクスの測定機能を実装予定です。</p>
+                <div class="dev-banner" id="fourkeys-dev-banner">
+                    <div class="dev-banner-content">
+                        <span class="dev-banner-icon">🚧</span>
+                        <div>
+                            <h3>データの生成が必要です</h3>
+                            <p>Four Keys メトリクスを表示するには、データ生成スクリプトを実行してください。</p>
+                            <code>python Dashboard_pages/generate_data.py</code>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="fourkeys-content">
-                    <div class="feature-grid">
-                        <div class="metric-card" id="deployment-frequency">
-                            <h3>📦 Deployment Frequency</h3>
-                            <p class="metric-value">-</p>
-                            <p class="metric-description">デプロイ頻度</p>
+                    <!-- Metrics Cards Grid -->
+                    <div class="metrics-grid">
+                        <div class="metric-card modern-card" id="deployment-frequency">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">📦</span>
+                                <h3>Deployment Frequency</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value loading">-</p>
+                                    <p class="metric-unit"></p>
+                                </div>
+                                <p class="metric-description">デプロイ頻度</p>
+                                <div class="metric-badge"></div>
+                            </div>
                         </div>
 
-                        <div class="metric-card" id="lead-time">
-                            <h3>⏱️ Lead Time for Changes</h3>
-                            <p class="metric-value">-</p>
-                            <p class="metric-description">変更のリードタイム</p>
+                        <div class="metric-card modern-card" id="lead-time">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">⏱️</span>
+                                <h3>Lead Time for Changes</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value loading">-</p>
+                                    <p class="metric-unit"></p>
+                                </div>
+                                <p class="metric-description">変更のリードタイム</p>
+                                <div class="metric-badge"></div>
+                            </div>
                         </div>
 
-                        <div class="metric-card" id="change-failure-rate">
-                            <h3>❌ Change Failure Rate</h3>
-                            <p class="metric-value">-</p>
-                            <p class="metric-description">変更失敗率</p>
+                        <div class="metric-card modern-card" id="change-failure-rate">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">❌</span>
+                                <h3>Change Failure Rate</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value loading">-</p>
+                                    <p class="metric-unit"></p>
+                                </div>
+                                <p class="metric-description">変更失敗率</p>
+                                <div class="metric-badge"></div>
+                            </div>
                         </div>
 
-                        <div class="metric-card" id="mttr">
-                            <h3>🔧 Time to Restore Service</h3>
-                            <p class="metric-value">-</p>
-                            <p class="metric-description">サービス復旧時間</p>
+                        <div class="metric-card modern-card" id="mttr">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">🔧</span>
+                                <h3>Time to Restore Service</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value loading">-</p>
+                                    <p class="metric-unit"></p>
+                                </div>
+                                <p class="metric-description">サービス復旧時間 (MTTR)</p>
+                                <div class="metric-badge"></div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- Charts will be inserted here by JavaScript -->
+                    <div id="fourkeys-charts" class="fourkeys-charts-container"></div>
                 </div>
             </div>
         </main>

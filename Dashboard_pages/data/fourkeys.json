@@ -1,0 +1,66 @@
+{
+  "generated": "2025-11-09T16:00:00Z",
+  "metrics": {
+    "deploymentFrequency": {
+      "value": 5.2,
+      "unit": "per week",
+      "totalDeployments": 26,
+      "weeks": 5.0,
+      "classification": {
+        "level": "High",
+        "color": "#3b82f6"
+      }
+    },
+    "leadTime": {
+      "value": 3.5,
+      "unit": "days",
+      "median": 3.5,
+      "average": 4.2,
+      "classification": {
+        "level": "High",
+        "color": "#3b82f6"
+      }
+    },
+    "changeFailureRate": {
+      "value": 12.5,
+      "unit": "percent",
+      "failures": 3,
+      "total": 24,
+      "classification": {
+        "level": "Elite",
+        "color": "#10b981"
+      }
+    },
+    "mttr": {
+      "value": 8.5,
+      "unit": "hours",
+      "median": 8.5,
+      "classification": {
+        "level": "High",
+        "color": "#3b82f6"
+      }
+    }
+  },
+  "detailedData": {
+    "deployments": [
+      { "week": "2025-W44", "count": 5 },
+      { "week": "2025-W45", "count": 6 },
+      { "week": "2025-W46", "count": 4 },
+      { "week": "2025-W47", "count": 5 },
+      { "week": "2025-W48", "count": 6 }
+    ],
+    "leadTimes": [
+      { "number": 1001, "title": "Fix authentication", "leadTimeDays": 3.2, "mergedAt": "2025-10-18T15:30:00Z" },
+      { "number": 1003, "title": "Update docs", "leadTimeDays": 0.8, "mergedAt": "2025-10-29T10:00:00Z" },
+      { "number": 1005, "title": "Fix memory leak", "leadTimeDays": 5.3, "mergedAt": "2025-10-25T16:00:00Z" }
+    ],
+    "failures": [
+      { "number": 1001, "title": "Fix authentication", "labels": ["fix"], "mergedAt": "2025-10-18T15:30:00Z", "restoreTimeHours": 76.8 },
+      { "number": 1005, "title": "Fix memory leak", "labels": ["fix", "critical"], "mergedAt": "2025-10-25T16:00:00Z", "restoreTimeHours": 127.2 }
+    ],
+    "restoreTimes": [
+      { "number": 1001, "title": "Fix authentication", "restoreTimeHours": 76.8, "mergedAt": "2025-10-18T15:30:00Z" },
+      { "number": 1005, "title": "Fix memory leak", "restoreTimeHours": 127.2, "mergedAt": "2025-10-25T16:00:00Z" }
+    ]
+  }
+}
