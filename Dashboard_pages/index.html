@@ -397,8 +397,8 @@
             <!-- Statistics Page -->
             <div id="page-statistics" class="page">
                 <div class="page-header">
-                    <h1>📊 統計情報・週間レポート</h1>
-                    <p class="page-subtitle">
+                    <h1 data-i18n="statistics.title">📊 統計情報・週間レポート</h1>
+                    <p class="page-subtitle" data-i18n="statistics.subtitle">
                         開発プロセスの現状を理解し、改善の機会を見つけるための包括的な統計情報
                     </p>
                 </div>
@@ -406,7 +406,7 @@
                 <!-- Controls -->
                 <div class="statistics-controls">
                     <div class="control-group">
-                        <label for="periodSelect">レポート期間:</label>
+                        <label for="periodSelect" data-i18n="statistics.period">レポート期間:</label>
                         <select id="periodSelect" class="form-select">
                             <option value="thisWeek">今週</option>
                             <option value="lastWeek">先週</option>
@@ -416,19 +416,19 @@
                             <option value="last90days">過去90日</option>
                         </select>
                     </div>
-                    <button id="downloadReport" class="btn btn-primary">
+                    <button id="downloadReport" class="btn btn-primary" data-i18n="statistics.download">
                         📄 週間レポートをダウンロード
                     </button>
                 </div>
 
                 <!-- Summary Cards -->
                 <div class="statistics-summary">
-                    <h2>📅 期間サマリー</h2>
+                    <h2 data-i18n="statistics.summary">📅 期間サマリー</h2>
                     <div class="metrics-grid">
                         <div class="metric-card modern-card" id="totalPRsCard">
                             <div class="metric-card-header">
                                 <span class="metric-icon">📋</span>
-                                <h3>総PR数</h3>
+                                <h3 data-i18n="statistics.total_prs">総PR数</h3>
                             </div>
                             <div class="metric-card-body">
                                 <div class="metric-value-container">
@@ -441,7 +441,7 @@
                         <div class="metric-card modern-card" id="mergedPRsCard">
                             <div class="metric-card-header">
                                 <span class="metric-icon">✅</span>
-                                <h3>マージ済み</h3>
+                                <h3 data-i18n="statistics.merged">マージ済み</h3>
                             </div>
                             <div class="metric-card-body">
                                 <div class="metric-value-container">
@@ -454,7 +454,7 @@
                         <div class="metric-card modern-card" id="leadTimeCard">
                             <div class="metric-card-header">
                                 <span class="metric-icon">⏱️</span>
-                                <h3>平均リードタイム</h3>
+                                <h3 data-i18n="statistics.lead_time">平均リードタイム</h3>
                             </div>
                             <div class="metric-card-body">
                                 <div class="metric-value-container">
@@ -467,7 +467,7 @@
                         <div class="metric-card modern-card" id="activeAuthorsCard">
                             <div class="metric-card-header">
                                 <span class="metric-icon">👥</span>
-                                <h3>アクティブ開発者</h3>
+                                <h3 data-i18n="statistics.active_authors">アクティブ開発者</h3>
                             </div>
                             <div class="metric-card-body">
                                 <div class="metric-value-container">
@@ -483,11 +483,11 @@
                 <div class="statistics-charts">
                     <div class="chart-row">
                         <div class="chart-container half-width">
-                            <h3>PR状態の内訳</h3>
+                            <h3 data-i18n="statistics.state_breakdown">PR状態の内訳</h3>
                             <div id="stateChart" class="chart-placeholder"></div>
                         </div>
                         <div class="chart-container half-width">
-                            <h3>レビュー活動</h3>
+                            <h3 data-i18n="statistics.review_activity">レビュー活動</h3>
                             <div id="reviewMetrics" class="review-metrics"></div>
                         </div>
                     </div>
@@ -495,14 +495,14 @@
 
                 <!-- Trends Section -->
                 <div class="statistics-trends">
-                    <h2>📈 トレンド分析（過去8週間）</h2>
+                    <h2 data-i18n="statistics.trends">📈 トレンド分析（過去8週間）</h2>
                     <div class="chart-row">
                         <div class="chart-container half-width">
-                            <h3>PR作成数の推移</h3>
+                            <h3 data-i18n="statistics.pr_count_trend">PR作成数の推移</h3>
                             <div id="trendPRChart" class="chart-placeholder"></div>
                         </div>
                         <div class="chart-container half-width">
-                            <h3>平均リードタイムの推移</h3>
+                            <h3 data-i18n="statistics.lead_time_trend">平均リードタイムの推移</h3>
                             <div id="trendLeadTimeChart" class="chart-placeholder"></div>
                         </div>
                     </div>
@@ -510,17 +510,17 @@
 
                 <!-- Insights Section -->
                 <div class="statistics-insights">
-                    <h2>💡 洞察</h2>
+                    <h2 data-i18n="statistics.insights">💡 洞察</h2>
                     <div id="insightsContainer" class="insights-container">
-                        <div class="loading">データを分析中...</div>
+                        <div class="loading" data-i18n="statistics.loading_insights">データを分析中...</div>
                     </div>
                 </div>
 
                 <!-- Recommendations Section -->
                 <div class="statistics-recommendations">
-                    <h2>🎯 改善提案</h2>
+                    <h2 data-i18n="statistics.recommendations">🎯 改善提案</h2>
                     <div id="recommendationsContainer" class="recommendations-container">
-                        <div class="loading">提案を生成中...</div>
+                        <div class="loading" data-i18n="statistics.loading_recommendations">提案を生成中...</div>
                     </div>
                 </div>
             </div>
