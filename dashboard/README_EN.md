@@ -14,8 +14,6 @@ An integrated Streamlit dashboard for visualizing and analyzing GitHub PRs
 - Review speed analysis
 - Change pattern analysis
 
----
-
 ## Setup
 
 ### 1. Install Packages
@@ -61,8 +59,6 @@ python fetch_data.py --all
 streamlit run app.py
 ```
 
----
-
 ## Data Updates
 
 ### Manual Update
@@ -85,8 +81,6 @@ schtasks /create /tn "GitHub PR Fetch" /tr "python C:\path\to\dashboard\fetch_da
 0 2 * * * cd /path/to/dashboard && python fetch_data.py --all
 ```
 
----
-
 ## Feature Details
 
 ### PR Dashboard
@@ -105,8 +99,6 @@ schtasks /create /tn "GitHub PR Fetch" /tr "python C:\path\to\dashboard\fetch_da
 - **Review Speed**: Time-to-merge analysis
 - **Change Patterns**: File change frequency and PR size
 
----
-
 ## Architecture
 
 ### Caching Mechanism
@@ -120,8 +112,6 @@ Data flow: `fetch_data.py` (once daily) → `pr_cache.db` → `app.py` (instant 
 - Subsequent display: <0.1 seconds
 - API calls: Once per day only
 
----
-
 ## Troubleshooting
 
 | Issue | Solution |
@@ -130,8 +120,6 @@ Data flow: `fetch_data.py` (once daily) → `pr_cache.db` → `app.py` (instant 
 | Data is outdated | `python fetch_data.py --all --force` |
 | Add repository | Add to REPOSITORIES in `config.py`, then refetch data |
 | Thread info not displayed | `python fetch_data.py --all --force` |
-
----
 
 ## File Structure
 
@@ -150,12 +138,8 @@ dashboard/
 └── pr_cache.db           # DB (auto-generated)
 ```
 
----
-
 ## Customization
 
 - Business day definition: Modify `calculate_business_hours()` function
 - Stale threshold: Adjust in sidebar (default: 168 hours)
 - Color coding: By state (OPEN/MERGED/CLOSED), by elapsed time (green→red)
-
----

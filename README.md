@@ -9,29 +9,29 @@ GitHubのPull Requestを可視化・分析するダッシュボード
 
 PRの状態、レビュー状況、ボトルネックを直感的に可視化し、開発チームの生産性向上を支援します。
 
-## 🎯 2つのバージョン
+## 2つのバージョン
 
 このリポジトリは2つの実装を提供しています:
 
 1. **[Streamlit版](dashboard/)** - ローカルPC上で動作するPythonベースのダッシュボード
-2. **[GitHub Pages版](Dashboard_pages/)** - GitHub Pagesで公開できる静的Webアプリケーション（🆕 推奨）
+2. **[GitHub Pages版](Dashboard_pages/)** - GitHub Pagesで公開できる静的Webアプリケーション（推奨）
 
-| 機能 | Streamlit版 | **GitHub Pages版** |
+| 機能 | Streamlit版 | GitHub Pages版 |
 |------|------------|------------------|
-| 実行環境 | ローカルPC | **クラウド（無料）** |
-| セットアップ | Python環境必要 | **不要（ブラウザのみ）** |
-| 自動更新 | 手動設定 | **GitHub Actions（自動）** |
-| アクセス | localhost | **公開URL** |
-| チーム共有 | 難しい | **簡単（URLを共有）** |
+| 実行環境 | ローカルPC | クラウド（無料） |
+| セットアップ | Python環境必要 | 不要（ブラウザのみ） |
+| 自動更新 | 手動設定 | GitHub Actions（自動） |
+| アクセス | localhost | 公開URL |
+| チーム共有 | 難しい | 簡単（URLを共有） |
 
-👉 **GitHub Pages版の使い方は [Dashboard_pages/README.md](Dashboard_pages/README.md) を参照してください**
+GitHub Pages版の使い方は [Dashboard_pages/README.md](Dashboard_pages/README.md) を参照してください。
 
-🌐 **[デモサイト (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/)** でこのリポジトリのPRダッシュボードを確認できます！
+[デモサイト (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/) でこのリポジトリのPRダッシュボードを確認できます。
 
 ## ディレクトリ構成
 
 ```
-├── Dashboard_pages/       # 🆕 GitHub Pages版（静的Webアプリ）
+├── Dashboard_pages/       # GitHub Pages版（静的Webアプリ）
 │   ├── index.html        # メインHTMLページ
 │   ├── css/              # スタイルシート
 │   ├── js/               # JavaScriptロジック
