@@ -16,27 +16,71 @@ from fetcher import run_query
 import db_cache  # SQLiteキャッシュ
 
 
-st.set_page_config(page_title="PRダッシュボード", layout="wide", page_icon="")
+st.set_page_config(page_title="PRダッシュボード", layout="wide", page_icon="📊")
 
-st.markdown(
-    """
-    <style>
-    h1, h2, h3 { margin-bottom: 0.4rem; }
-    section[data-testid=\"stSidebar\"] .stMarkdown { font-size: 0.95rem; }
-    div[data-testid=\"stMetric\"] { background: #fafafa; border: 1px solid #eee; border-radius: 12px; padding: 12px; }
-    div[data-testid=\"stDataFrame\"] { border: 1px solid #eee; border-radius: 10px; }
-    .progress-label { font-weight: 600; }
-    .badge {
-      display: inline-block; padding: 4px 10px; border-radius: 999px;
-      background: #eef2ff; color: #334155; font-size: 0.85rem; margin-right: 6px;
-      border: 1px solid #e5e7eb;
-    }
-    .badge.strong { background: #dcfce7; }
-    .small-note { color: #6b7280; font-size: 0.85rem; }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+# Initialize dark mode state if not exists
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+# Apply custom CSS based on theme
+if st.session_state.dark_mode:
+    st.markdown(
+        """
+        <style>
+        .stApp { background-color: #1a1a1a; color: #e4e4e7; }
+        h1, h2, h3 { margin-bottom: 0.4rem; color: #e4e4e7; font-weight: 700; }
+        section[data-testid=\"stSidebar\"] { background-color: #262626; }
+        section[data-testid=\"stSidebar\"] .stMarkdown { font-size: 0.95rem; color: #e4e4e7; }
+        div[data-testid=\"stMetric\"] { 
+            background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+            border: 1px solid #3f3f46;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+        div[data-testid=\"stMetric\"]:hover { transform: translateY(-4px); }
+        div[data-testid=\"stDataFrame\"] { border: 1px solid #3f3f46; border-radius: 10px; }
+        .progress-label { font-weight: 600; color: #e4e4e7; }
+        .badge {
+          display: inline-block; padding: 4px 10px; border-radius: 999px;
+          background: #3f3f46; color: #e4e4e7; font-size: 0.85rem; margin-right: 6px;
+          border: 1px solid #52525b;
+        }
+        .badge.strong { background: #166534; color: #86efac; }
+        .small-note { color: #a1a1aa; font-size: 0.85rem; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <style>
+        h1, h2, h3 { margin-bottom: 0.4rem; font-weight: 700; }
+        section[data-testid=\"stSidebar\"] .stMarkdown { font-size: 0.95rem; }
+        div[data-testid=\"stMetric\"] { 
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        div[data-testid=\"stMetric\"]:hover { transform: translateY(-4px); }
+        div[data-testid=\"stDataFrame\"] { border: 1px solid #e5e7eb; border-radius: 10px; }
+        .progress-label { font-weight: 600; }
+        .badge {
+          display: inline-block; padding: 4px 10px; border-radius: 999px;
+          background: #eef2ff; color: #334155; font-size: 0.85rem; margin-right: 6px;
+          border: 1px solid #e5e7eb;
+        }
+        .badge.strong { background: #dcfce7; }
+        .small-note { color: #6b7280; font-size: 0.85rem; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 JST = ZoneInfo("Asia/Tokyo")
 

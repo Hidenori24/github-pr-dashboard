@@ -11,6 +11,9 @@ let appData = {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing GitHub PR Dashboard...');
     
+    // Initialize theme
+    initializeTheme();
+    
     // Initialize i18n
     if (typeof i18n !== 'undefined') {
         i18n.init();
@@ -36,6 +39,32 @@ function toggleLanguage() {
     if (typeof i18n !== 'undefined') {
         const newLang = i18n.currentLang === 'ja' ? 'en' : 'ja';
         i18n.setLanguage(newLang);
+    }
+}
+
+// Toggle theme between light and dark mode
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+    
+    // Update theme icon
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) {
+        themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    }
+}
+
+// Initialize theme from localStorage
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    
+    const themeIcon = document.getElementById('themeIcon');
+    if (themeIcon) {
+        themeIcon.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     }
 }
 
