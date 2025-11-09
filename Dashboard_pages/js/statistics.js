@@ -565,7 +565,7 @@ function downloadWeeklyReport() {
     
     const report = `# GitHub PR 週間レポート
 
-**リポジトリ**: ${CONFIG.owner}/${CONFIG.repo}
+**リポジトリ**: ${appData.owner}/${appData.repo}
 **期間**: ${formatDate(currentStart)} - ${formatDate(currentEnd)}
 **作成日時**: ${formatDate(now)} ${now.toLocaleTimeString('ja-JP')}
 
