@@ -32,10 +32,23 @@ Check out the [Live Demo (GitHub Pages)](https://hidenori24.github.io/github-pr-
 
 ```
 ├── Dashboard_pages/       # GitHub Pages version (static web app)
-│   ├── index.html        # Main HTML page
-│   ├── css/              # Stylesheets
-│   ├── js/               # JavaScript logic
-│   ├── data/             # JSON data (auto-generated)
+│   ├── index.html        # Main HTML page (5 pages integrated)
+│   ├── css/
+│   │   └── style.css     # Stylesheets
+│   ├── js/
+│   │   ├── config.js     # Configuration
+│   │   ├── i18n.js       # Internationalization
+│   │   ├── app.js        # Main application logic
+│   │   ├── dashboard.js  # Dashboard page
+│   │   ├── analytics.js  # Analytics page
+│   │   ├── fourkeys.js   # Four Keys page
+│   │   └── statistics.js # Statistics & Reports page
+│   ├── data/             # JSON data (GitHub Actions auto-generated)
+│   │   ├── config.json   # Repository configuration
+│   │   ├── prs.json      # PR data
+│   │   ├── analytics.json # Analytics data
+│   │   ├── fourkeys.json # Four Keys data
+│   │   └── cache_info.json # Cache information
 │   ├── generate_data.py  # Data generation script
 │   └── README.md         # Pages version documentation
 │
@@ -43,8 +56,9 @@ Check out the [Live Demo (GitHub Pages)](https://hidenori24.github.io/github-pr-
     ├── app.py            # Main entry point
     ├── pages/
     │   ├── 1_dashboard.py    # PR timeline visualization
-    │   ├── 2_analytics.py    # PR statistics analysis
-    │   └── 3_four_keys.py    # Four Keys metrics
+    │   ├── 2_analytics.py    # PR statistics analysis (7 tabs)
+    │   ├── 3_four_keys.py    # Four Keys metrics (DORA Metrics)
+    │   └── 4_statistics.py   # Statistics & Weekly Reports
     ├── fetch_data.py     # Data fetching script
     ├── config.py         # Configuration file
     ├── fetcher.py        # GitHub API calls
@@ -82,13 +96,74 @@ For detailed documentation, see `dashboard/README.md`.
 
 ## Main Features
 
+### 🎯 Dashboard Features
 - **Multi-Repository Support**: Manage multiple repositories centrally
 - **PR Timeline**: Visually track PR progress with Gantt charts
-- **Bottleneck Analysis**: Auto-detect PRs awaiting review/fixes (business day-based)
-- **Reviewer Analysis**: Identify non-responsive reviewers
-- **Comment Thread Analysis**: Track feedback → response → resolution flow
-- **Statistics & Weekly Reports**: Statistical analysis and automated improvement recommendations
+- **Documentation/Code Analysis**: PR timeline by directory
+- **Action Tracking**: Auto-detect PRs awaiting review/fixes (business day-based)
+
+### 📊 Analysis Features (7 Analysis Tabs)
+- **Stagnation Analysis**: Distribution of open PR durations
+- **Blocker Analysis**: Estimation of reasons for unclosed PRs
+- **Reviewer Analysis**: Review activity and comment response status
+- **Trend Analysis**: Weekly PR creation trends
+- **Bottleneck Analysis**: Details on review/fix delays
+- **Review Speed**: Time-to-merge analysis
+- **Change Patterns**: File change frequency and PR size
+
+### 🔑 Four Keys Metrics
+- **Deployment Frequency**: Number of deployments per week
+- **Lead Time for Changes**: Time from PR creation to merge
+- **Change Failure Rate**: Percentage of failed PRs
+- **Time to Restore Service**: Mean Time To Recovery (MTTR)
+
+### 📈 Statistics & Reports
+- **Period Summary**: Total PRs, merge rate, average lead time, active developers
+- **Trend Analysis**: 8-week trends for PR creation and average lead time
+- **Review Activity**: Total reviews, comments, averages per PR
+- **Automated Insights**: Development activity analysis and issue detection
+- **Improvement Suggestions**: Concrete action proposals based on data
+- **Weekly Report Export**: Markdown-formatted report generation
+
+### ⚡ Performance
 - **Fast Display**: Local cache enables sub-0.1 second display speeds
+- **Auto Update**: Periodic data updates via GitHub Actions
+- **Rate Limit Protection**: Efficient API calls using ETag/Last-Modified headers
+
+## Four Keys Metrics (DORA Metrics)
+
+Measure software development performance using the four key metrics from DevOps Research and Assessment (DORA).
+
+### The Four Key Metrics
+
+1. **Deployment Frequency**
+   - How often code is deployed to production
+   - Calculated from the number of merged PRs
+   - High-performing teams deploy multiple times per day
+
+2. **Lead Time for Changes**
+   - Time from commit to production deployment
+   - Measured as average time from PR creation to merge
+   - High-performing teams achieve less than one day
+
+3. **Change Failure Rate**
+   - Percentage of deployments causing failures or requiring fixes
+   - Calculated from the ratio of closed to merged PRs
+   - High-performing teams stay below 15%
+
+4. **Time to Restore Service (MTTR)**
+   - Time from production incident to recovery
+   - Measured by resolution time of issues tagged as hotfix
+   - High-performing teams recover in less than one hour
+
+### Performance Levels
+
+Four performance levels based on DORA Metrics:
+
+- **Elite**: Top level across all metrics
+- **High**: Excellent in most metrics
+- **Medium**: Average performance
+- **Low**: Room for improvement
 
 ## Statistics & Weekly Reports
 

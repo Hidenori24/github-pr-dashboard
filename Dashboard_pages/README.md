@@ -14,11 +14,19 @@ GitHub Actionsが定期的にPRデータを取得し、JSONファイルとして
 - **完全静的**: サーバー不要、GitHub Pagesで動作
 - **自動更新**: GitHub Actionsで毎日自動データ取得
 - **高速表示**: ローカルファイル読み込みで瞬時に表示
-- **Streamlit風UI**: 元のStreamlitダッシュボードのデザインを踏襲
+- **モダンUI**: Streamlit風のクリーンなデザイン
 - **マルチリポジトリ対応**: 複数リポジトリを一元管理
 - **レスポンシブデザイン**: PC/タブレット/スマホ対応
 - **多言語対応**: 日本語・英語の切り替え機能
-- **Four Keys対応**: DevOps Four Keysメトリクスを可視化（🆕 モダンUI実装）
+- **ダークモード**: テーマの切り替えに対応
+
+### 提供するページ
+
+1. **🏠 ホーム**: リポジトリ選択と機能概要
+2. **📊 PRダッシュボード**: PRタイムライン可視化とアクション追跡
+3. **📈 PR分析**: 7つの分析タブ（滞留、ブロッカー、レビュワー、トレンド、ボトルネック、速度、変更パターン）
+4. **🔑 Four Keys**: DORA Metricsによるパフォーマンス測定
+5. **📊 統計・レポート**: 包括的な統計情報と週間レポート生成
 
 ## ディレクトリ構成
 
@@ -29,16 +37,18 @@ Dashboard_pages/
 │   └── style.css       # スタイルシート（Streamlit風デザイン）
 ├── js/
 │   ├── config.js       # 設定ファイル
-│   ├── i18n.js         # 国際化対応
+│   ├── i18n.js         # 国際化対応（日本語/英語）
 │   ├── app.js          # メインアプリケーションロジック
 │   ├── dashboard.js    # ダッシュボードページロジック
-│   ├── analytics.js    # 分析ページロジック
-│   └── fourkeys.js     # Four Keysページロジック（🆕）
+│   ├── analytics.js    # 分析ページロジック（7つの分析タブ）
+│   ├── fourkeys.js     # Four Keysページロジック
+│   └── statistics.js   # 統計・レポートページロジック
 ├── data/               # 生成されるJSONデータ（GitHub Actionsで自動生成）
 │   ├── config.json     # リポジトリ設定
 │   ├── prs.json        # PRデータ
 │   ├── analytics.json  # 分析データ
-│   ├── fourkeys.json   # Four Keysメトリクスデータ（🆕）
+│   ├── fourkeys.json   # Four Keysメトリクスデータ
+│   ├── statistics.json # 統計・レポートデータ
 │   └── cache_info.json # キャッシュ情報
 ├── generate_data.py    # データ生成スクリプト
 └── README.md          # このファイル
@@ -300,6 +310,48 @@ DevOps Four Keysメトリクスの測定と可視化を**モダンなUIで実装
 - [DORA Research](https://www.devops-research.com/research.html)
 - [Google Cloud - Four Keys Project](https://github.com/GoogleCloudPlatform/fourkeys)
 - [Accelerate (書籍)](https://itrevolution.com/product/accelerate/)
+
+### 統計・レポート 📊
+
+開発プロセスの現状を理解し、改善の機会を見つけるための包括的な統計情報を提供します。
+
+**📅 期間サマリー:**
+- 総PR数とマージ率
+- 平均リードタイム
+- アクティブ開発者数
+- 前期間との比較
+
+**📈 トレンド分析（過去8週間）:**
+- PR作成数の推移
+- 平均リードタイムの推移
+- グラフによる可視化
+
+**👥 レビュー活動:**
+- 総レビュー数
+- 総コメント数
+- PR当たりの平均値
+
+**💡 自動洞察機能:**
+統計データから以下のような洞察を自動生成：
+- 開発活動の活発化・低下の検知
+- レビュー速度の改善・遅延の分析
+- マージ率の評価
+- レビュー活動の監視
+- 滞留PRの警告
+
+**🎯 改善提案:**
+現状の課題に基づいて具体的な改善アクションを提案：
+- レビュー時間の短縮方法
+- レビュー文化の醸成
+- PR完了率の向上策
+- チームコラボレーションの促進
+
+**📄 週間レポート出力:**
+- Markdown形式でのレポート生成
+- 主要メトリクスのサマリー
+- 前週との比較
+- 改善提案の一覧
+- ダウンロードボタンで簡単出力
 
 ## データフロー
 
