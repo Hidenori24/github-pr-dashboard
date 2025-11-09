@@ -106,6 +106,13 @@ function updateTimelineChart(prs) {
         return;
     }
     
+    // Check if Plotly is available
+    if (typeof Plotly === 'undefined') {
+        chartContainer.innerHTML = '<div class="error-message">⚠️ チャートライブラリの読み込みに失敗しました。ページを再読み込みしてください。</div>';
+        console.error('Plotly is not loaded. Cannot render timeline chart.');
+        return;
+    }
+    
     // Sort PRs by creation date (newest first) and take top 30
     const sortedPRs = prs
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -167,7 +174,12 @@ function updateTimelineChart(prs) {
         displaylogo: false
     };
     
-    Plotly.newPlot(chartContainer, traces, layout, config);
+    try {
+        Plotly.newPlot(chartContainer, traces, layout, config);
+    } catch (error) {
+        console.error('Error rendering chart:', error);
+        chartContainer.innerHTML = '<div class="error-message">⚠️ チャートの描画中にエラーが発生しました。</div>';
+    }
 }
 
 // Update PR table
