@@ -4,22 +4,22 @@ A static web application that migrates the Streamlit-based dashboard to GitHub P
 
 [日本語](README.md) | English
 
-## 🎯 Overview
+## Overview
 
 This directory contains a static PR dashboard that can be hosted on GitHub Pages.
 GitHub Actions periodically fetches PR data and saves it as JSON files, which are visualized on static HTML pages.
 
 ### Key Features
 
-- ✅ **Fully Static**: No server required, runs on GitHub Pages
-- ✅ **Auto Update**: Daily automatic data fetching via GitHub Actions
-- ✅ **Fast Display**: Instant display by loading local files
-- ✅ **Streamlit-style UI**: Follows the design of the original Streamlit dashboard
-- ✅ **Multi-Repository Support**: Manage multiple repositories in one place
-- ✅ **Responsive Design**: Works on PC/Tablet/Mobile
-- ✅ **Bilingual Support**: Japanese and English interface with language toggle
+- **Fully Static**: No server required, runs on GitHub Pages
+- **Auto Update**: Daily automatic data fetching via GitHub Actions
+- **Fast Display**: Instant display by loading local files
+- **Streamlit-style UI**: Follows the design of the original Streamlit dashboard
+- **Multi-Repository Support**: Manage multiple repositories in one place
+- **Responsive Design**: Works on PC/Tablet/Mobile
+- **Bilingual Support**: Japanese and English interface with language toggle
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 Dashboard_pages/
@@ -41,7 +41,7 @@ Dashboard_pages/
 └── README.md          # This file
 ```
 
-## 🚀 Setup
+## Setup
 
 ### Method 1: GitHub Actions Auto Deploy (Recommended)
 
@@ -67,7 +67,7 @@ Dashboard_pages/
 
 3. **Configure GitHub Token and Permissions**
 
-   **⚠️ Important: Check Actions Permissions**
+   **Important: Check Actions Permissions**
    
    The default `GITHUB_TOKEN` can be used to fetch PR data from public repositories.
    
@@ -166,7 +166,7 @@ Dashboard_pages/
 
    Open `http://localhost:8000`
 
-## ⚙️ Configuration
+## Configuration
 
 ### Change Monitored Repositories
 
@@ -206,7 +206,7 @@ schedule:
 - **Default Display**: `ui` section in `js/config.js`
 - **Language**: Use the language toggle button (EN/JA) in the UI
 
-## 📊 Features
+## Features
 
 ### Home Page
 
@@ -237,7 +237,7 @@ schedule:
 
 DevOps Four Keys metrics measurement feature (to be implemented)
 
-## 🔄 Data Flow
+## Data Flow
 
 ```
 ┌─────────────────────┐
@@ -267,7 +267,7 @@ DevOps Four Keys metrics measurement feature (to be implemented)
 └─────────────────────┘
 ```
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Data Not Displaying
 
@@ -305,7 +305,7 @@ DevOps Four Keys metrics measurement feature (to be implemented)
 2. Check if workflow completed successfully
 3. Verify repository is public or GitHub Pages settings are correct
 
-## 📝 Key Changes from Streamlit Version
+## Key Changes from Streamlit Version
 
 | Feature | Streamlit Version | Pages Version |
 |---------|------------------|---------------|
@@ -317,7 +317,7 @@ DevOps Four Keys metrics measurement feature (to be implemented)
 | Charts | Plotly (Python) | Plotly.js |
 | Language | Japanese only | Japanese/English toggle |
 
-## 🎨 Design
+## Design
 
 Follows these Streamlit design elements:
 
@@ -328,21 +328,21 @@ Follows these Streamlit design elements:
 - Responsive design
 - Bilingual interface (Japanese/English)
 
-## 🔐 Security
+## Security
 
 - GitHub Token managed in GitHub Actions secrets
 - Only static files published, no server-side processing
 - Private repository data can be safely processed
 
-## 📄 License
+## License
 
 This project is provided under the same license as the original repository.
 
-## 🤝 Contributing
+## Contributing
 
 Bug reports and feature requests are welcome at [Issues](../../issues).
 
-## 📚 Related Documentation
+## Related Documentation
 
 - [Original Streamlit Version README](../dashboard/README.md)
 - [GitHub Pages Documentation](https://docs.github.com/en/pages)

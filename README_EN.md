@@ -9,49 +9,48 @@ A dashboard for visualizing and analyzing GitHub Pull Requests
 
 Visualize PR status, review progress, and bottlenecks intuitively to improve your development team's productivity.
 
-## 🎯 Two Versions
+## Two Versions
 
 This repository provides two implementations:
 
 1. **[Streamlit Version](dashboard/)** - Python-based dashboard running on local PC
-2. **[GitHub Pages Version](Dashboard_pages/)** - Static web application that can be published on GitHub Pages (🆕 Recommended)
+2. **[GitHub Pages Version](Dashboard_pages/)** - Static web application that can be published on GitHub Pages (Recommended)
 
-| Feature | Streamlit Version | **GitHub Pages Version** |
+| Feature | Streamlit Version | GitHub Pages Version |
 |---------|------------------|--------------------------|
-| Runtime | Local PC | **Cloud (Free)** |
-| Setup | Python environment required | **Not required (Browser only)** |
-| Auto Update | Manual setup | **GitHub Actions (Automatic)** |
-| Access | localhost | **Public URL** |
-| Team Sharing | Difficult | **Easy (Share URL)** |
+| Runtime | Local PC | Cloud (Free) |
+| Setup | Python environment required | Not required (Browser only) |
+| Auto Update | Manual setup | GitHub Actions (Automatic) |
+| Access | localhost | Public URL |
+| Team Sharing | Difficult | Easy (Share URL) |
 
-👉 **For GitHub Pages version usage, see [Dashboard_pages/README.md](Dashboard_pages/README.md)**
+For GitHub Pages version usage, see [Dashboard_pages/README.md](Dashboard_pages/README.md).
 
-🌐 **Check out the [Live Demo (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/)** to see the PR dashboard for this repository!
-
-## Key Features
-
-- **Multi-Repository Support**: Manage multiple repositories in one place
-- **PR Timeline**: Visualize PR progress with Gantt charts
-- **Bottleneck Analysis**: Auto-detect PRs waiting for review or fixes (based on business days)
-- **Reviewer Analysis**: Identify who is not responding to reviews
-- **Comment Thread Analysis**: Track the flow from feedback → response → resolution
-- **High-Speed Display**: Display in less than 0.1 seconds with local caching
+Check out the [Live Demo (GitHub Pages)](https://hidenori24.github.io/github-pr-dashboard/) to see the PR dashboard for this repository.
 
 ## Directory Structure
 
 ```
-dashboard/
-├── app.py                # Main entry point
-├── pages/
-│   ├── 1_dashboard.py    # PR timeline visualization
-│   ├── 2_analytics.py    # PR statistics analysis
-│   └── 3_four_keys.py    # Four Keys metrics
-├── fetch_data.py         # Data fetching script
-├── config.py             # Configuration file
-├── fetcher.py            # GitHub API calls
-├── db_cache.py           # SQLite cache management
-├── action_tracker.py     # Action tracking
-└── pr_cache.db           # Cache DB (auto-generated)
+├── Dashboard_pages/       # GitHub Pages version (static web app)
+│   ├── index.html        # Main HTML page
+│   ├── css/              # Stylesheets
+│   ├── js/               # JavaScript logic
+│   ├── data/             # JSON data (auto-generated)
+│   ├── generate_data.py  # Data generation script
+│   └── README.md         # Pages version documentation
+│
+└── dashboard/            # Streamlit version (local execution)
+    ├── app.py            # Main entry point
+    ├── pages/
+    │   ├── 1_dashboard.py    # PR timeline visualization
+    │   ├── 2_analytics.py    # PR statistics analysis
+    │   └── 3_four_keys.py    # Four Keys metrics
+    ├── fetch_data.py     # Data fetching script
+    ├── config.py         # Configuration file
+    ├── fetcher.py        # GitHub API calls
+    ├── db_cache.py       # SQLite cache management
+    ├── action_tracker.py # Action tracking
+    └── pr_cache.db       # Cache DB (auto-generated)
 ```
 
 ## Quick Start

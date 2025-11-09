@@ -14,8 +14,6 @@ GitHubのPRを可視化・分析する統合Streamlitダッシュボード
 - レビュー速度分析
 - 変更パターン分析
 
----
-
 ## セットアップ
 
 ### 1. パッケージインストール
@@ -61,8 +59,6 @@ python fetch_data.py --all
 streamlit run app.py
 ```
 
----
-
 ## データ更新
 
 ### 手動更新
@@ -85,8 +81,6 @@ schtasks /create /tn "GitHub PR Fetch" /tr "python C:\path\to\dashboard\fetch_da
 0 2 * * * cd /path/to/dashboard && python fetch_data.py --all
 ```
 
----
-
 ## 機能詳細
 
 ### PRダッシュボード
@@ -105,8 +99,6 @@ schtasks /create /tn "GitHub PR Fetch" /tr "python C:\path\to\dashboard\fetch_da
 - **レビュー速度**: マージまでの時間分析
 - **変更パターン**: ファイル変更頻度とPR規模
 
----
-
 ## アーキテクチャ
 
 ### キャッシュ機構
@@ -120,8 +112,6 @@ SQLite（`pr_cache.db`）にPRデータ、ETag、スレッド詳細を保存。
 - 再表示: 0.1秒以下
 - API呼び出し: 1日1回のみ
 
----
-
 ## トラブルシューティング
 
 | 問題 | 対処法 |
@@ -130,8 +120,6 @@ SQLite（`pr_cache.db`）にPRデータ、ETag、スレッド詳細を保存。
 | データが古い | `python fetch_data.py --all --force` |
 | リポジトリ追加 | `config.py`のREPOSITORIESに追加後、データ再取得 |
 | スレッド情報が表示されない | `python fetch_data.py --all --force` |
-
----
 
 ## ファイル構成
 
@@ -150,12 +138,8 @@ dashboard/
 └── pr_cache.db           # DB（自動生成）
 ```
 
----
-
 ## カスタマイズ
 
 - 営業日定義: `calculate_business_hours()` 関数を修正
 - Stale判定: サイドバーで調整（デフォルト: 168時間）
 - 色分け: 状態別（OPEN/MERGED/CLOSED）、経過時間別（緑→赤）
-
----
