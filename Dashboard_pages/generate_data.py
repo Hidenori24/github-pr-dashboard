@@ -43,6 +43,12 @@ def generate_config_json(output_dir: Path):
 def generate_prs_json(output_dir: Path, repositories: list):
     """Generate prs.json from cached PR data"""
     all_prs = []
+    cache_available = False
+    
+    # Check if cache database exists
+    cache_db_path = parent_dir / "dashboard" / "pr_cache.db"
+    if cache_db_path.exists():
+        cache_available = True
     
     for repo_config in repositories:
         owner = repo_config['owner']
@@ -50,19 +56,28 @@ def generate_prs_json(output_dir: Path, repositories: list):
         
         print(f"  Loading PRs from {owner}/{repo}...")
         
-        try:
-            cached_prs = db_cache.load_prs(owner, repo)
-            
-            # Add owner/repo to each PR for filtering
-            for pr in cached_prs:
-                pr['owner'] = owner
-                pr['repo'] = repo
-            
-            all_prs.extend(cached_prs)
-            print(f"    Loaded {len(cached_prs)} PRs")
-            
-        except Exception as e:
-            print(f"    Warning: Could not load PRs from {owner}/{repo}: {e}")
+        if cache_available:
+            try:
+                cached_prs = db_cache.load_prs(owner, repo)
+                
+                # Add owner/repo to each PR for filtering
+                for pr in cached_prs:
+                    pr['owner'] = owner
+                    pr['repo'] = repo
+                
+                all_prs.extend(cached_prs)
+                print(f"    Loaded {len(cached_prs)} PRs from cache")
+                
+            except Exception as e:
+                print(f"    Warning: Could not load PRs from {owner}/{repo}: {e}")
+        else:
+            print(f"    Warning: Cache database not found, skipping")
+    
+    # If no PRs were loaded from cache, create an empty file
+    # The frontend will fall back to sample_prs.json
+    if len(all_prs) == 0:
+        print("  ⚠️  No PRs loaded from cache. Creating empty prs.json.")
+        print("     The dashboard will use sample data as fallback.")
     
     output_file = output_dir / "prs.json"
     with open(output_file, 'w', encoding='utf-8') as f:
@@ -82,21 +97,33 @@ def generate_cache_info_json(output_dir: Path, repositories: list, total_prs: in
     
     # Add per-repository cache info
     repo_info = []
-    for repo_config in repositories:
-        owner = repo_config['owner']
-        repo = repo_config['repo']
-        
-        try:
-            info = db_cache.get_cache_info(owner, repo)
-            if info:
-                repo_info.append({
-                    "owner": owner,
-                    "repo": repo,
-                    "count": info['count'],
-                    "lastFetch": info['latest_fetch']
-                })
-        except Exception:
-            pass
+    cache_db_path = parent_dir / "dashboard" / "pr_cache.db"
+    
+    if cache_db_path.exists():
+        for repo_config in repositories:
+            owner = repo_config['owner']
+            repo = repo_config['repo']
+            
+            try:
+                info = db_cache.get_cache_info(owner, repo)
+                if info:
+                    repo_info.append({
+                        "owner": owner,
+                        "repo": repo,
+                        "count": info['count'],
+                        "lastFetch": info['latest_fetch']
+                    })
+            except Exception:
+                pass
+    else:
+        # Cache database doesn't exist, add placeholder info
+        for repo_config in repositories:
+            repo_info.append({
+                "owner": repo_config['owner'],
+                "repo": repo_config['repo'],
+                "count": 0,
+                "lastFetch": None
+            })
     
     cache_info['repositoryInfo'] = repo_info
     
