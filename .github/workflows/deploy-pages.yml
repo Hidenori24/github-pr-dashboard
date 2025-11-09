@@ -1,14 +1,9 @@
 name: Deploy GitHub PR Dashboard to Pages
 
 on:
-  # Run on schedule (daily at 2 AM UTC)
   schedule:
     - cron: '0 2 * * *'
-  
-  # Allow manual trigger
   workflow_dispatch:
-  
-  # Run on push to main or PR branch (optional)
   push:
     branches:
       - main
@@ -18,77 +13,64 @@ on:
       - 'dashboard/**'
       - '.github/workflows/deploy-pages.yml'
 
-# Sets permissions for GitHub Pages deployment
 permissions:
   contents: read
   pages: write
   id-token: write
-  pull-requests: read  # Required to fetch PR data via GitHub API
 
-# Allow one concurrent deployment
 concurrency:
   group: "pages"
   cancel-in-progress: true
 
 jobs:
-  # Job to fetch PR data and generate static files
   build:
     runs-on: ubuntu-latest
-    
+    # ここで GraphQL エンドポイントを上書きすることで 404 を防ぐ
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      # 空にして fallback を使う場合は "" に、明示するなら以下:
+      GITHUB_API_URL: https://api.github.com/graphql
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
+
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
-      
+            pip install -r requirements.txt
+
       - name: Fetch PR data from GitHub API
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        working-directory: dashboard
         run: |
-          cd dashboard
-          if python fetch_data.py --all; then
-            echo "✅ Data fetch successful"
-          else
-            echo "⚠️ Data fetch failed - workflow will continue with existing cache or sample data"
-            echo "Note: This is expected if GITHUB_TOKEN doesn't have sufficient permissions"
-          fi
+          python fetch_data.py --all
+        # continue-on-error を外して失敗を正しく検出
       
       - name: Generate static data for Pages
+        working-directory: Dashboard_pages
         run: |
-          cd Dashboard_pages
-          if python generate_data.py; then
-            echo "✅ Data generation successful"
-            # Check if we have actual data or just empty arrays
-            PR_COUNT=$(python -c "import json; data=json.load(open('data/prs.json')); print(len(data))")
-            echo "Generated $PR_COUNT PRs"
-            if [ "$PR_COUNT" -eq "0" ]; then
-              echo "⚠️ No PR data available - dashboard will use sample data"
-            fi
-          else
-            echo "⚠️ Data generation failed - dashboard will use sample data"
-          fi
-      
+          python generate_data.py
+
+      - name: Validate generated files
+        run: |
+          test -f Dashboard_pages/config.json
+          test -f Dashboard_pages/prs.json || echo "prs.json missing (possibly no PRs)"
+
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: 'Dashboard_pages'
-  
-  # Job to deploy to GitHub Pages
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
