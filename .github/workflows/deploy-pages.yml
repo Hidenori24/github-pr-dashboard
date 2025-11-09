@@ -19,90 +19,60 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # GitHub が提供する自動トークン
       GITHUB_TOKEN: ${{ github.token }}
-      # エンドポイントを明示 (fetcher.py でさらに正規化)
       GITHUB_API_URL: https://api.github.com/graphql
       PYTHONUNBUFFERED: "1"
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          cache: pip
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements.txt
+        run: pip install -r requirements.txt
 
-      - name: Debug environment (before fetch)
-        run: |
-          echo "ENV GITHUB_API_URL=$GITHUB_API_URL"
-          echo "Python: $(python -V)"
-          ls -al dashboard || true
-          python - <<'PY'
-import os, sys
-print("[DEBUG] env GITHUB_API_URL ->", os.getenv("GITHUB_API_URL"))
-sys.path.insert(0, "dashboard")
-try:
-    import fetcher
-    print("[DEBUG] fetcher path ->", fetcher.__file__)
-    print("[DEBUG] fetcher.API_URL_DEFAULT ->", getattr(fetcher, "API_URL_DEFAULT", "<not set>"))
-except Exception as e:
-    print("[DEBUG] fetcher import error:", e)
-PY
-
-      - name: Fetch PR data from GitHub API
+      - name: Fetch PR data
         working-directory: dashboard
         run: |
-          set -e
-          echo "[INFO] Running fetch_data.py (errors will be tolerated to allow cached data usage)"
-          python fetch_data.py --all || echo "[WARN] fetch_data.py failed. Proceeding with existing cache if available."
+          echo "[INFO] Fetch PR data (errors tolerated)"
+          python fetch_data.py --all || echo "[WARN] fetch failed; will use existing cache."
         continue-on-error: true
 
-      - name: Generate static data for Pages
+      - name: Generate data files
         working-directory: Dashboard_pages
-        run: |
-          set -e
-          python generate_data.py
+        run: python generate_data.py
 
       - name: Validate generated files
         run: |
-          set -e
           if [ ! -d Dashboard_pages/data ]; then
-            echo "[ERROR] Dashboard_pages/data directory missing."
-            ls -al Dashboard_pages || true
+            echo "[ERROR] Dashboard_pages/data missing"
             exit 1
           fi
-          echo "[INFO] Listing generated files:"
           ls -al Dashboard_pages/data
           test -f Dashboard_pages/data/config.json
-          test -f Dashboard_pages/data/prs.json || (echo "[ERROR] prs.json missing" && exit 1)
-          # 非致命
-          test -f Dashboard_pages/data/cache_info.json || echo "[WARN] cache_info.json not found"
-          test -f Dashboard_pages/data/analytics.json || echo "[WARN] analytics.json not found"
+          test -f Dashboard_pages/data/prs.json
 
-      - name: Flatten JSON files to root (for front-end expecting root paths)
+      - name: Flatten JSON (copy to root for Pages)
         run: |
           cp Dashboard_pages/data/*.json Dashboard_pages/
-          echo "[INFO] After flatten:"
           ls -al Dashboard_pages | grep .json || true
 
-      - name: Upload artifact for Pages
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'Dashboard_pages'
+          path: Dashboard_pages
 
   deploy:
     needs: build
@@ -111,6 +81,6 @@ PY
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
+      - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
