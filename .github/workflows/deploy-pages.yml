@@ -23,6 +23,7 @@ permissions:
   contents: read
   pages: write
   id-token: write
+  pull-requests: read  # Required to fetch PR data via GitHub API
 
 # Allow one concurrent deployment
 concurrency:
@@ -52,14 +53,27 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cd dashboard
-          python fetch_data.py --all || echo "Data fetch failed, will use existing cache or sample data"
-        continue-on-error: true
+          if python fetch_data.py --all; then
+            echo "✅ Data fetch successful"
+          else
+            echo "⚠️ Data fetch failed - workflow will continue with existing cache or sample data"
+            echo "Note: This is expected if GITHUB_TOKEN doesn't have sufficient permissions"
+          fi
       
       - name: Generate static data for Pages
         run: |
           cd Dashboard_pages
-          python generate_data.py || echo "Data generation failed, will use sample data"
-        continue-on-error: true
+          if python generate_data.py; then
+            echo "✅ Data generation successful"
+            # Check if we have actual data or just empty arrays
+            PR_COUNT=$(python -c "import json; data=json.load(open('data/prs.json')); print(len(data))")
+            echo "Generated $PR_COUNT PRs"
+            if [ "$PR_COUNT" -eq "0" ]; then
+              echo "⚠️ No PR data available - dashboard will use sample data"
+            fi
+          else
+            echo "⚠️ Data generation failed - dashboard will use sample data"
+          fi
       
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
