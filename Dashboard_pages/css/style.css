@@ -20,6 +20,18 @@
     --gradient-start: #667eea;
     --gradient-end: #764ba2;
     
+    /* Refined chart colors - less saturated, more professional */
+    --chart-color-1: #6366f1;  /* Indigo */
+    --chart-color-2: #8b5cf6;  /* Purple */
+    --chart-color-3: #ec4899;  /* Pink */
+    --chart-color-4: #14b8a6;  /* Teal */
+    --chart-color-5: #f59e0b;  /* Amber */
+    --chart-success: #10b981;  /* Emerald */
+    --chart-warning: #f59e0b;  /* Amber */
+    --chart-danger: #ef4444;   /* Red */
+    --chart-info: #3b82f6;     /* Blue */
+    --chart-neutral: #6b7280;  /* Gray */
+    
     /* Transitions */
     --transition-speed: 0.3s;
 }
@@ -44,6 +56,18 @@
     /* Dark mode specific gradients */
     --gradient-start: #667eea;
     --gradient-end: #764ba2;
+    
+    /* Dark mode chart colors - slightly brighter for visibility */
+    --chart-color-1: #818cf8;  /* Lighter Indigo */
+    --chart-color-2: #a78bfa;  /* Lighter Purple */
+    --chart-color-3: #f472b6;  /* Lighter Pink */
+    --chart-color-4: #2dd4bf;  /* Lighter Teal */
+    --chart-color-5: #fbbf24;  /* Lighter Amber */
+    --chart-success: #34d399;  /* Lighter Emerald */
+    --chart-warning: #fbbf24;  /* Lighter Amber */
+    --chart-danger: #f87171;   /* Lighter Red */
+    --chart-info: #60a5fa;     /* Lighter Blue */
+    --chart-neutral: #9ca3af;  /* Lighter Gray */
 }
 
 * {
@@ -450,34 +474,56 @@ h4 {
     display: inline-block;
     padding: 0.75rem 1.5rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s;
+    transition: all var(--transition-speed) ease;
     text-decoration: none;
     text-align: center;
     width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+}
+
+.btn:hover::before {
+    width: 300px;
+    height: 300px;
 }
 
 .btn-primary {
-    background-color: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #e04343 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(255, 75, 75, 0.3);
 }
 
 .btn-primary:hover {
-    background-color: #e04343;
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 75, 75, 0.4);
 }
 
 .btn-secondary {
-    background-color: var(--secondary-color);
+    background: linear-gradient(135deg, var(--secondary-color) 0%, #0056b3 100%);
     color: white;
+    box-shadow: 0 4px 15px rgba(0, 104, 201, 0.3);
 }
 
 .btn-secondary:hover {
-    background-color: #0056b3;
-    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 104, 201, 0.4);
 }
 
 /* Tips Grid */
@@ -745,12 +791,36 @@ tbody tr:hover {
 
 /* Metric Cards */
 .metric-card {
-    background-color: var(--card-bg);
+    background: linear-gradient(135deg, var(--card-bg) 0%, var(--hover-bg) 100%);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 2rem;
     text-align: center;
     box-shadow: var(--shadow);
+    transition: all var(--transition-speed) ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--gradient-start), var(--gradient-end));
+    opacity: 0;
+    transition: opacity var(--transition-speed) ease;
+}
+
+.metric-card:hover::before {
+    opacity: 1;
+}
+
+.metric-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
 }
 
 .metric-card h3 {
