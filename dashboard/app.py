@@ -257,7 +257,7 @@ if config.REPOSITORIES and 'primary_repo_index' in st.session_state:
 
 page = st.sidebar.radio(
     "ページ選択",
-    ["ホーム", "PRダッシュボード", "PR分析", "Four Keys"],
+    ["ホーム", "PRダッシュボード", "PR分析", "Four Keys", "統計・レポート"],
     label_visibility="collapsed"
 )
 
@@ -270,11 +270,14 @@ if page == "ホーム":
     ## 主な機能
     
     - **マルチリポジトリ対応**: 複数リポジトリを一元管理
+    - **PRタイムライン**: ガントチャートでPRの進行状況を可視化
     - **コメントスレッド分析**: 指摘→返信→解決の流れを可視化
-    - **ボトルネック分析強化**: 未応答時間を営業日ベースで計算
+    - **ボトルネック分析**: 未応答時間を営業日ベースで計算
     - **レビュワー分析**: 誰がレビューに応答していないかを特定
     - **レビュー速度分析**: 作成からマージまでの時間分析
     - **変更パターン分析**: ファイル変更頻度とPR規模分析
+    - **Four Keys指標**: DevOps Research and Assessmentの主要指標を測定
+    - **統計・週間レポート**: 開発プロセスの統計分析と自動改善提案
     """)
     
     # 設定済みリポジトリ一覧
@@ -333,7 +336,7 @@ if page == "ホーム":
     
     st.markdown("---")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("### PRダッシュボード")
@@ -380,6 +383,9 @@ if page == "ホーム":
         if st.button("PR分析を開く", type="primary", use_container_width=True):
             st.switch_page("pages/2_analytics.py")
     
+    
+    col3, col4 = st.columns(2)
+    
     with col3:
         st.markdown("### Four Keys")
         st.markdown("""
@@ -395,12 +401,32 @@ if page == "ホーム":
         - DevOpsパフォーマンス測定
         - DORA指標の可視化
         - チーム改善の定量評価
-        
-        **現在開発中**
         """)
         
-        if st.button("Four Keysを開く", type="secondary", use_container_width=True):
+        if st.button("Four Keysを開く", type="primary", use_container_width=True):
             st.switch_page("pages/3_four_keys.py")
+    
+    with col4:
+        st.markdown("### 統計・レポート")
+        st.markdown("""
+        **目的:** 開発プロセスの現状分析と改善提案
+        
+        **主な機能:**
+        - **期間サマリー**: 総PR数、マージ率、リードタイム
+        - **トレンド分析**: 過去8週間のPR作成数と平均リードタイムの推移
+        - **レビュー活動**: 総レビュー数、総コメント数
+        - **自動洞察**: 開発活動の分析と問題検知
+        - **改善提案**: データに基づく具体的なアクション提案
+        - **週間レポート**: Markdown形式でのレポート出力
+        
+        **こんな時に:**
+        - 週次・月次レポート作成
+        - チームの改善活動
+        - マネジメントへの報告
+        """)
+        
+        if st.button("統計・レポートを開く", type="primary", use_container_width=True):
+            st.switch_page("pages/4_statistics.py")
     
     st.markdown("---")
     
@@ -503,3 +529,6 @@ elif page == "PR分析":
 
 elif page == "Four Keys":
     st.switch_page("pages/3_four_keys.py")
+
+elif page == "統計・レポート":
+    st.switch_page("pages/4_statistics.py")

@@ -6,13 +6,40 @@ An integrated Streamlit dashboard for visualizing and analyzing GitHub PRs
 
 ## Key Features
 
-- Multi-repository support
-- PR timeline visualization (Gantt chart)
-- Comment thread analysis (track feedback → response → resolution flow)
-- Bottleneck analysis (auto-detect PRs awaiting review/fixes)
-- Reviewer analysis (visualize response status)
-- Review speed analysis
-- Change pattern analysis
+### Home
+- Select primary repository
+- Display data cache status
+- Navigation to each page
+- Toggle dark mode
+
+### PR Dashboard
+- **PR Timeline**: Gantt chart visualization
+- **Documentation/Code Analysis**: PR timeline by directory
+- **Action Tracking**: Auto-detect PRs awaiting review/fixes (business day-based)
+- **Metrics**: Open/Merged/Closed counts, average merge time
+
+### PR Analysis (7 Analysis Tabs)
+- **Stagnation Analysis**: Distribution of open PR durations
+- **Blocker Analysis**: Estimation of reasons for unclosed PRs
+- **Reviewer Analysis**: Review activity and comment response status
+- **Trend Analysis**: Weekly PR creation trends
+- **Bottleneck Analysis**: Details on review/fix delays
+- **Review Speed**: Time-to-merge analysis
+- **Change Patterns**: File change frequency and PR size
+
+### Four Keys (DORA Metrics)
+- **Deployment Frequency**: Deployments per week
+- **Lead Time for Changes**: Time from PR creation to merge
+- **Change Failure Rate**: Percentage of failed PRs
+- **Time to Restore Service**: Mean Time To Recovery (MTTR)
+
+### Statistics & Reports
+- **Period Summary**: Total PRs, merge rate, average lead time, active developers
+- **Trend Analysis**: 8-week trends for PR creation and average lead time
+- **Review Activity**: Total reviews, comments, averages per PR
+- **Automated Insights**: Development activity analysis and issue detection
+- **Improvement Suggestions**: Concrete action proposals based on data
+- **Weekly Report Export**: Markdown-formatted report generation
 
 ## Setup
 
