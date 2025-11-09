@@ -526,6 +526,54 @@ h4 {
     box-shadow: 0 6px 20px rgba(0, 104, 201, 0.4);
 }
 
+/* Usage Grid */
+.usage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+}
+
+.usage-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    transition: all 0.3s;
+}
+
+.usage-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.usage-card h4 {
+    color: var(--text-color);
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
+.usage-card ul {
+    list-style: none;
+    padding-left: 0;
+    font-size: 0.9rem;
+}
+
+.usage-card li {
+    padding: 0.4rem 0;
+    padding-left: 1.2rem;
+    position: relative;
+    color: var(--text-secondary);
+}
+
+.usage-card li:before {
+    content: "▸";
+    position: absolute;
+    left: 0;
+    color: var(--primary-color);
+}
+
 /* Tips Grid */
 .tips-grid {
     display: grid;

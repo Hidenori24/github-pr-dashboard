@@ -68,11 +68,14 @@
                         <h3 data-i18n="home.features.title">主な機能</h3>
                         <ul>
                             <li><strong data-i18n="home.features.multi">マルチリポジトリ対応</strong>: <span data-i18n="home.features.multi.desc">複数リポジトリを一元管理</span></li>
+                            <li><strong data-i18n="home.features.timeline">PRタイムライン</strong>: <span data-i18n="home.features.timeline.desc">ガントチャートでPRの進行状況を可視化</span></li>
                             <li><strong data-i18n="home.features.comment">コメントスレッド分析</strong>: <span data-i18n="home.features.comment.desc">指摘→返信→解決の流れを可視化</span></li>
                             <li><strong data-i18n="home.features.bottleneck">ボトルネック分析</strong>: <span data-i18n="home.features.bottleneck.desc">未応答時間を営業日ベースで計算</span></li>
                             <li><strong data-i18n="home.features.reviewer">レビュワー分析</strong>: <span data-i18n="home.features.reviewer.desc">誰がレビューに応答していないかを特定</span></li>
                             <li><strong data-i18n="home.features.speed">レビュー速度分析</strong>: <span data-i18n="home.features.speed.desc">作成からマージまでの時間分析</span></li>
                             <li><strong data-i18n="home.features.pattern">変更パターン分析</strong>: <span data-i18n="home.features.pattern.desc">ファイル変更頻度とPR規模分析</span></li>
+                            <li><strong data-i18n="home.features.fourkeys">Four Keys指標</strong>: <span data-i18n="home.features.fourkeys.desc">DevOps Research and Assessmentの主要指標を測定</span></li>
+                            <li><strong data-i18n="home.features.statistics">統計・週間レポート</strong>: <span data-i18n="home.features.statistics.desc">開発プロセスの統計分析と自動改善提案</span></li>
                         </ul>
                     </div>
                 </div>
@@ -139,6 +142,62 @@
                         <button class="btn btn-primary" onclick="navigateToPage('fourkeys')" data-i18n="fourkeys.open">
                             Four Keysを開く
                         </button>
+                    </div>
+
+                    <div class="feature-card" data-page="statistics">
+                        <h3 data-i18n="statistics.title">統計・レポート</h3>
+                        <p><strong data-i18n="statistics.purpose">目的:</strong> <span data-i18n="statistics.purpose.desc">開発プロセスの現状分析と改善提案</span></p>
+                        <h4 data-i18n="statistics.features.title">主な機能:</h4>
+                        <ul>
+                            <li><strong data-i18n="statistics.feature.summary">期間サマリー</strong>: <span data-i18n="statistics.feature.summary.desc">総PR数、マージ率、リードタイム</span></li>
+                            <li><strong data-i18n="statistics.feature.trends">トレンド分析</strong>: <span data-i18n="statistics.feature.trends.desc">過去8週間のPR作成数と平均リードタイムの推移</span></li>
+                            <li><strong data-i18n="statistics.feature.review">レビュー活動</strong>: <span data-i18n="statistics.feature.review.desc">総レビュー数、総コメント数</span></li>
+                            <li><strong data-i18n="statistics.feature.insights">自動洞察</strong>: <span data-i18n="statistics.feature.insights.desc">開発活動の分析と問題検知</span></li>
+                            <li><strong data-i18n="statistics.feature.recommendations">改善提案</strong>: <span data-i18n="statistics.feature.recommendations.desc">データに基づく具体的なアクション提案</span></li>
+                            <li><strong data-i18n="statistics.feature.report">週間レポート</strong>: <span data-i18n="statistics.feature.report.desc">Markdown形式でのレポート出力</span></li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="navigateToPage('statistics')" data-i18n="statistics.open">
+                            統計・レポートを開く
+                        </button>
+                    </div>
+                </div>
+
+                <hr class="divider">
+
+                <h2 data-i18n="home.usage.title">こんな時に使う</h2>
+                <div class="usage-grid">
+                    <div class="usage-card">
+                        <h4>📊 PRダッシュボード</h4>
+                        <ul>
+                            <li>日次のPR確認</li>
+                            <li>ファイル影響範囲の確認</li>
+                            <li>コードレビューの優先順位付け</li>
+                        </ul>
+                    </div>
+                    <div class="usage-card">
+                        <h4>📈 PR分析</h4>
+                        <ul>
+                            <li>問題PRの早期発見</li>
+                            <li>レビュワーの応答遅延検出</li>
+                            <li>レトロスペクティブ</li>
+                            <li>マネジメントレポート</li>
+                        </ul>
+                    </div>
+                    <div class="usage-card">
+                        <h4>🔑 Four Keys</h4>
+                        <ul>
+                            <li>DevOpsパフォーマンス測定</li>
+                            <li>DORA指標の可視化</li>
+                            <li>チーム改善の定量評価</li>
+                        </ul>
+                    </div>
+                    <div class="usage-card">
+                        <h4>📊 統計・レポート</h4>
+                        <ul>
+                            <li>週次・月次レポート作成</li>
+                            <li>チームの改善活動</li>
+                            <li>マネジメントへの報告</li>
+                        </ul>
                     </div>
                 </div>
 
