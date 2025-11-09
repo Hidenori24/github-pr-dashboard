@@ -18,6 +18,7 @@ GitHub Actionsが定期的にPRデータを取得し、JSONファイルとして
 - **マルチリポジトリ対応**: 複数リポジトリを一元管理
 - **レスポンシブデザイン**: PC/タブレット/スマホ対応
 - **多言語対応**: 日本語・英語の切り替え機能
+- **Four Keys対応**: DevOps Four Keysメトリクスを可視化（🆕 モダンUI実装）
 
 ## ディレクトリ構成
 
@@ -31,11 +32,13 @@ Dashboard_pages/
 │   ├── i18n.js         # 国際化対応
 │   ├── app.js          # メインアプリケーションロジック
 │   ├── dashboard.js    # ダッシュボードページロジック
-│   └── analytics.js    # 分析ページロジック
+│   ├── analytics.js    # 分析ページロジック
+│   └── fourkeys.js     # Four Keysページロジック（🆕）
 ├── data/               # 生成されるJSONデータ（GitHub Actionsで自動生成）
 │   ├── config.json     # リポジトリ設定
 │   ├── prs.json        # PRデータ
 │   ├── analytics.json  # 分析データ
+│   ├── fourkeys.json   # Four Keysメトリクスデータ（🆕）
 │   └── cache_info.json # キャッシュ情報
 ├── generate_data.py    # データ生成スクリプト
 └── README.md          # このファイル
@@ -232,9 +235,17 @@ schedule:
 6. **レビュー速度**: マージまでの時間分析
 7. **変更パターン**: ファイル変更頻度とPR規模
 
-### Four Keys
+### Four Keys 🆕
 
-DevOps Four Keysメトリクスの測定と可視化:
+DevOps Four Keysメトリクスの測定と可視化を**モダンなUIで実装しました**:
+
+**✨ 新しいデザイン:**
+- カラフルなメトリクスカード（アイコン・グラデーション付き）
+- DORAレベルに応じたカラーコーディング（Elite: 緑、High: 青、Medium: 黄、Low: 赤）
+- ホバーアニメーションとスムーズなトランジション
+- レスポンシブデザインで全デバイス対応
+
+**📊 4つの主要指標:**
 
 1. **Deployment Frequency (デプロイ頻度)** - マージされたPRを基に計測
 2. **Lead Time for Changes (変更のリードタイム)** - PR作成からマージまでの時間
