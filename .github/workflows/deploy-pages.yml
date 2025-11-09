@@ -19,21 +19,25 @@ permissions:
   id-token: write
 
 concurrency:
-  group: "pages"
+  group: pages
   cancel-in-progress: true
+
+env:
+  # Keep both; some libs use GH_GRAPHQL_URL while your code uses GITHUB_API_URL
+  GITHUB_API_URL: https://api.github.com/graphql
+  GH_GRAPHQL_URL: https://api.github.com/graphql
+  PYTHONUNBUFFERED: "1"
+  ENABLE_FLATTEN: "false"  # set to "true" to activate legacy flatten step
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ github.token }}
-      # GraphQL エンドポイントを明示 (fetcher.py で正規化される前提でも安全側で指定)
-      GITHUB_API_URL: https://api.github.com/graphql
-      PYTHONUNBUFFERED: "1"
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,54 +47,95 @@ jobs:
 
       - name: Install dependencies
         run: |
+          set -euo pipefail
+          python -V
+          pip install --upgrade pip
           pip install -r requirements.txt
+          pip freeze | sed 's/^/  /'
 
       - name: Debug environment
         run: |
+          set -euo pipefail
           echo "GITHUB_API_URL=$GITHUB_API_URL"
-          echo "Python version: $(python -V)"
+          echo "GH_GRAPHQL_URL=$GH_GRAPHQL_URL"
+          echo "Python: $(python -V)"
+          echo "Working directory: $PWD"
+          echo "Listing dashboard/:"
+          ls -al dashboard || true
           python - <<'PY'
 import os, sys
+sys.path.insert(0, "dashboard")
+print("sys.path:", sys.path)
 print("Runtime GITHUB_API_URL:", os.getenv("GITHUB_API_URL"))
-# fetcher モジュールのパス確認
+print("Runtime GH_GRAPHQL_URL:", os.getenv("GH_GRAPHQL_URL"))
 try:
-    sys.path.insert(0, "dashboard")
     import fetcher
-    print("fetcher module path:", fetcher.__file__)
-    print("fetcher.API_URL_DEFAULT (if defined):", getattr(fetcher, "API_URL_DEFAULT", "<not set>"))
+    print("fetcher module file:", fetcher.__file__)
+    print("API_URL_DEFAULT:", getattr(fetcher, "API_URL_DEFAULT", "<not set>"))
 except Exception as e:
     print("Fetcher import error:", e)
 PY
 
-      - name: Fetch PR data from GitHub API
+      - name: Fetch PR data from GitHub API (with retry)
         working-directory: dashboard
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          python fetch_data.py --all
+          set -euo pipefail
+          attempt=0
+            while true; do
+              attempt=$((attempt+1))
+              echo "Fetch attempt $attempt..."
+              if python fetch_data.py --all; then
+                echo "Fetch succeeded."
+                break
+              fi
+              if [ $attempt -ge 3 ]; then
+                echo "Fetch failed after $attempt attempts."
+                exit 1
+              fi
+              echo "Transient failure, sleeping before retry..."
+              sleep 10
+            done
 
       - name: Generate static data for Pages
         working-directory: Dashboard_pages
         run: |
+          set -euo pipefail
           python generate_data.py
 
       - name: Validate generated files
         run: |
-          # config.json / prs.json / 他の生成物が data/ 下にある前提
-          ls -al Dashboard_pages/data || (echo "data directory missing" && exit 1)
-          test -f Dashboard_pages/data/config.json
-          test -f Dashboard_pages/data/prs.json
-          test -f Dashboard_pages/data/cache_info.json || echo "cache_info.json not found (non-fatal)"
-          test -f Dashboard_pages/data/analytics.json || echo "analytics.json not found (non-fatal)"
-        # ここで失敗したら deploy ジョブには進まない
+          set -euo pipefail
+          echo "Tree of Dashboard_pages:"
+          find Dashboard_pages -maxdepth 3 -type f -print
+          ls -al Dashboard_pages/data || (echo "::error::data directory missing" && exit 1)
+          for f in config.json prs.json; do
+            test -f Dashboard_pages/data/$f || (echo "::error::$f missing" && exit 1)
+          done
+          for optional in cache_info.json analytics.json; do
+            if [ ! -f Dashboard_pages/data/$optional ]; then
+              echo "::warning::$optional not found (non-fatal)"
+            fi
+          done
+          echo "File sizes:"
+          du -h Dashboard_pages/data/* || true
 
       - name: (Optional) Flatten data for legacy front-end
-        if: ${{ always() && false }} # 必要なら true にして有効化
+        if: ${{ env.ENABLE_FLATTEN == 'true' }}
         run: |
+          set -euo pipefail
           cp Dashboard_pages/data/*.json Dashboard_pages/
+          echo "Flattened JSON files copied to top-level."
+
+      # Optional explicit configuration (uncomment if you need custom CNAME/root config)
+      # - name: Configure Pages
+      #   uses: actions/configure-pages@v5
 
       - name: Upload artifact for Pages
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'Dashboard_pages'
+          path: Dashboard_pages
 
   deploy:
     needs: build
