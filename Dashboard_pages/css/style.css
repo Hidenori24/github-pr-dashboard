@@ -1743,7 +1743,7 @@ tbody tr:hover {
 /* Info and Success Messages */
 .info-message {
     padding: 1.5rem;
-    background: var(--info-color)22;
+    background: rgba(0, 192, 242, 0.13);
     border-left: 4px solid var(--info-color);
     border-radius: 8px;
     color: var(--text-color);
@@ -1751,7 +1751,7 @@ tbody tr:hover {
 
 .success-message {
     padding: 1.5rem;
-    background: var(--success-color)22;
+    background: rgba(33, 195, 84, 0.13);
     border-left: 4px solid var(--success-color);
     border-radius: 8px;
     color: var(--text-color);

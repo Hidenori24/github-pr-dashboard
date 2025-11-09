@@ -145,6 +145,20 @@ def calculate_business_hours(start_dt: datetime, end_dt: datetime) -> float:
     return total_hours
 
 
+def calculate_median_lead_time(df: pd.DataFrame) -> float:
+    """Calculate median lead time for merged PRs in days"""
+    merged_df = df[df['state'] == 'MERGED']
+    if merged_df.empty:
+        return 0.0
+    
+    merged_copy = merged_df.copy()
+    merged_copy['lead_time'] = (
+        pd.to_datetime(merged_copy['mergedAt'], format="ISO8601", utc=True) - 
+        pd.to_datetime(merged_copy['createdAt'], format="ISO8601", utc=True)
+    ).dt.total_seconds() / 3600 / 24
+    return merged_copy['lead_time'].median()
+
+
 def generate_weekly_statistics(df: pd.DataFrame, current_week_df: pd.DataFrame, previous_week_df: pd.DataFrame) -> dict:
     """週間統計を生成"""
     stats = {}
@@ -161,29 +175,11 @@ def generate_weekly_statistics(df: pd.DataFrame, current_week_df: pd.DataFrame, 
     stats['total_change_pct'] = (stats['total_change'] / prev_total * 100) if prev_total > 0 else 0
     
     # レビュー時間
-    merged_current = current_week_df[current_week_df['state'] == 'MERGED']
-    if not merged_current.empty:
-        merged_current_copy = merged_current.copy()
-        merged_current_copy['lead_time'] = (
-            pd.to_datetime(merged_current_copy['mergedAt'], format="ISO8601", utc=True) - 
-            pd.to_datetime(merged_current_copy['createdAt'], format="ISO8601", utc=True)
-        ).dt.total_seconds() / 3600 / 24
-        stats['avg_lead_time'] = merged_current_copy['lead_time'].median()
-    else:
-        stats['avg_lead_time'] = 0
+    stats['avg_lead_time'] = calculate_median_lead_time(current_week_df)
     
     # 前週のレビュー時間
-    merged_prev = previous_week_df[previous_week_df['state'] == 'MERGED']
-    if not merged_prev.empty:
-        merged_prev_copy = merged_prev.copy()
-        merged_prev_copy['lead_time'] = (
-            pd.to_datetime(merged_prev_copy['mergedAt'], format="ISO8601", utc=True) - 
-            pd.to_datetime(merged_prev_copy['createdAt'], format="ISO8601", utc=True)
-        ).dt.total_seconds() / 3600 / 24
-        prev_lead_time = merged_prev_copy['lead_time'].median()
-        stats['lead_time_change'] = stats['avg_lead_time'] - prev_lead_time
-    else:
-        stats['lead_time_change'] = 0
+    prev_lead_time = calculate_median_lead_time(previous_week_df)
+    stats['lead_time_change'] = stats['avg_lead_time'] - prev_lead_time
     
     # アクティブな開発者数
     stats['active_authors'] = current_week_df['author'].nunique()

@@ -71,8 +71,11 @@ function getDateRanges(period) {
     switch (period) {
         case 'thisWeek':
             // This week (Monday to today)
+            // Handle Sunday (0) as last day of previous week
             currentStart = new Date(now);
-            currentStart.setDate(now.getDate() - now.getDay() + 1);
+            const dayOfWeek = now.getDay();
+            const daysFromMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+            currentStart.setDate(now.getDate() + daysFromMonday);
             currentStart.setHours(0, 0, 0, 0);
             currentEnd = now;
             
@@ -563,9 +566,13 @@ function downloadWeeklyReport() {
     const { currentStart, currentEnd } = getDateRanges(currentPeriod);
     const now = new Date();
     
+    // Get repository info from primary repository in config
+    const primaryIndex = appData.config?.primaryRepoIndex || 0;
+    const primaryRepo = appData.config?.repositories?.[primaryIndex] || { owner: 'Unknown', repo: 'Unknown' };
+    
     const report = `# GitHub PR 週間レポート
 
-**リポジトリ**: ${appData.owner}/${appData.repo}
+**リポジトリ**: ${primaryRepo.owner}/${primaryRepo.repo}
 **期間**: ${formatDate(currentStart)} - ${formatDate(currentEnd)}
 **作成日時**: ${formatDate(now)} ${now.toLocaleTimeString('ja-JP')}
 
