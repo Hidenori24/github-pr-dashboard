@@ -15,7 +15,12 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
-                <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
             </div>
             
             <div class="sidebar-content">

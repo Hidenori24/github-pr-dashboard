@@ -9,7 +9,54 @@ import numpy as np
 import config
 import db_cache
 
-st.set_page_config(page_title="Four Keys", layout="wide", page_icon="")
+st.set_page_config(page_title="Four Keys", layout="wide", page_icon="🔑")
+
+# Initialize dark mode state if not exists
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+# Apply custom CSS based on theme
+if st.session_state.dark_mode:
+    st.markdown(
+        """
+        <style>
+        .stApp { background-color: #1a1a1a; color: #e4e4e7; }
+        h1, h2, h3 { color: #e4e4e7; font-weight: 700; }
+        section[data-testid="stSidebar"] { background-color: #262626; }
+        section[data-testid="stSidebar"] .stMarkdown { color: #e4e4e7; }
+        div[data-testid="stMetric"] { 
+            background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+            border: 1px solid #3f3f46;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+        div[data-testid="stMetric"]:hover { transform: translateY(-4px); }
+        .stAlert { border-radius: 8px; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <style>
+        h1, h2, h3 { font-weight: 700; }
+        div[data-testid="stMetric"] { 
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+        div[data-testid="stMetric"]:hover { transform: translateY(-4px); }
+        .stAlert { border-radius: 8px; }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def calculate_business_hours(start_dt: datetime, end_dt: datetime) -> float:

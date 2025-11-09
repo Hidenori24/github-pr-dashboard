@@ -19,6 +19,144 @@ if 'auto_update_done' not in st.session_state:
     st.session_state.auto_update_done = False
 if 'primary_repo_index' not in st.session_state:
     st.session_state.primary_repo_index = 0  # デフォルトは最初のリポジトリ
+if 'dark_mode' not in st.session_state:
+    st.session_state.dark_mode = False
+
+# カスタムCSS - モダンなスタイリングとダークモード対応
+def inject_custom_css():
+    """Inject custom CSS for modern styling and dark mode support"""
+    if st.session_state.dark_mode:
+        # Dark mode styles
+        st.markdown("""
+        <style>
+        /* Dark Mode Styles */
+        .stApp {
+            background-color: #1a1a1a;
+            color: #e4e4e7;
+        }
+        
+        section[data-testid="stSidebar"] {
+            background-color: #262626;
+        }
+        
+        section[data-testid="stSidebar"] .stMarkdown {
+            color: #e4e4e7;
+        }
+        
+        div[data-testid="stMetric"] {
+            background: linear-gradient(135deg, #2a2a2a 0%, #333333 100%);
+            border: 1px solid #3f3f46;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        div[data-testid="stMetric"]:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.4);
+        }
+        
+        div[data-testid="stMetric"] label {
+            color: #a1a1aa !important;
+            font-weight: 600;
+        }
+        
+        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+            color: #4fc3f7 !important;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stButton button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        div[data-baseweb="card"] {
+            background-color: #262626;
+            border: 1px solid #3f3f46;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1, h2, h3 {
+            color: #e4e4e7;
+            font-weight: 700;
+        }
+        
+        .stAlert {
+            border-radius: 8px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+    else:
+        # Light mode styles
+        st.markdown("""
+        <style>
+        /* Modern Light Mode Styles */
+        div[data-testid="stMetric"] {
+            background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        div[data-testid="stMetric"]:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        div[data-testid="stMetric"] label {
+            color: #6b7280 !important;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        div[data-testid="stMetric"] [data-testid="stMetricValue"] {
+            color: #ff4b4b !important;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        
+        .stButton button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .stButton button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(102, 126, 234, 0.4);
+        }
+        
+        h1, h2, h3 {
+            font-weight: 700;
+        }
+        
+        .stAlert {
+            border-radius: 8px;
+        }
+        </style>
+        """, unsafe_allow_html=True)
+
+inject_custom_css()
 
 
 def check_and_update_cache():
@@ -103,6 +241,14 @@ def auto_update_background():
 
 # メインページ選択
 st.sidebar.title("GitHub PR Tools")
+
+# ダークモードトグル
+col1, col2 = st.sidebar.columns([3, 1])
+with col2:
+    if st.button("🌙" if not st.session_state.dark_mode else "☀️", key="theme_toggle"):
+        st.session_state.dark_mode = not st.session_state.dark_mode
+        inject_custom_css()
+        st.rerun()
 
 # プライマリーリポジトリ表示（サイドバー）
 if config.REPOSITORIES and 'primary_repo_index' in st.session_state:
