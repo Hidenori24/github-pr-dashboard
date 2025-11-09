@@ -403,20 +403,58 @@ def main():
     fourkeys = generate_fourkeys_json(output_dir, prs)
     print()
     
+    # Generate issues.json
+    print("Generating issues.json...")
+    issues = generate_issues_json(output_dir, repositories)
+    print()
+    
     # Summary
     print("=" * 60)
     print("Summary:")
     print(f"  Repositories: {len(repositories)}")
     print(f"  Total PRs: {len(prs)}")
-    print(f"  Open: {analytics['summary']['open']}")
-    print(f"  Merged: {analytics['summary']['merged']}")
-    print(f"  Closed: {analytics['summary']['closed']}")
+    print(f"  Total Issues: {len(issues)}")
+    print(f"  Open PRs: {analytics['summary']['open']}")
+    print(f"  Merged PRs: {analytics['summary']['merged']}")
+    print(f"  Closed PRs: {analytics['summary']['closed']}")
     print()
     print("✓ All data files generated successfully!")
     print()
     print("Next steps:")
     print("  1. Open Dashboard_pages/index.html in a browser")
     print("  2. Or deploy to GitHub Pages")
+
+
+def generate_issues_json(output_dir: Path, repositories: list):
+    """Generate issues.json from cached issue data"""
+    all_issues = []
+    
+    for repo_config in repositories:
+        owner = repo_config['owner']
+        repo = repo_config['repo']
+        
+        print(f"  Loading Issues from {owner}/{repo}...")
+        
+        try:
+            cached_issues = db_cache.load_issues(owner, repo)
+            
+            # Add owner/repo to each issue for filtering
+            for issue in cached_issues:
+                issue['owner'] = owner
+                issue['repo'] = repo
+            
+            all_issues.extend(cached_issues)
+            print(f"    Loaded {len(cached_issues)} Issues")
+            
+        except Exception as e:
+            print(f"    Warning: Could not load Issues from {owner}/{repo}: {e}")
+    
+    output_file = output_dir / "issues.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(all_issues, f, indent=2, ensure_ascii=False)
+    
+    print(f"✓ Generated: {output_file} ({len(all_issues)} Issues)")
+    return all_issues
 
 
 if __name__ == "__main__":

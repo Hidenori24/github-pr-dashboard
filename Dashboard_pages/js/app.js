@@ -2,6 +2,7 @@
 let appData = {
     config: null,
     prs: [],
+    issues: [],
     analytics: null,
     cacheInfo: null,
     primaryRepoIndex: 0
@@ -111,6 +112,40 @@ function navigateToPage(pageName) {
             if (typeof initializeFourKeysPage === 'function') {
                 initializeFourKeysPage();
             }
+        } else if (pageName === 'issues') {
+            if (typeof loadIssuesData === 'function') {
+                loadIssuesData();
+            }
+        }
+    }
+}
+
+// Switch issues tab
+function switchIssuesTab(tabName) {
+    console.log('Switching to issues tab:', tabName);
+    
+    // Update active tab button
+    const issuesPage = document.getElementById('page-issues');
+    const tabButtons = issuesPage.querySelectorAll('.tab');
+    tabButtons.forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Show corresponding tab pane
+    const tabPanels = issuesPage.querySelectorAll('.tab-panel');
+    tabPanels.forEach(pane => {
+        pane.classList.remove('active');
+    });
+    
+    const targetPane = issuesPage.querySelector(`#tab-${tabName}`);
+    if (targetPane) {
+        targetPane.classList.add('active');
+        if (typeof loadIssuesTab === 'function') {
+            loadIssuesTab(tabName);
         }
     }
 }
@@ -260,6 +295,18 @@ async function loadAllData() {
         } catch (error) {
             console.warn('Cache info not found:', error.message);
             appData.cacheInfo = null;
+        }
+        
+        // Load issues data (optional)
+        try {
+            appData.issues = await safeFetch(`${CONFIG.dataSource.basePath}issues.json`, {
+                timeout: 10000,
+                retries: 2
+            });
+            console.log('Issues loaded:', appData.issues.length);
+        } catch (error) {
+            console.warn('Issues data not found:', error.message);
+            appData.issues = [];
         }
         
         // Show summary of loading issues if any
