@@ -233,9 +233,63 @@ schedule:
 6. **Review Speed**: Time analysis from creation to merge
 7. **Change Pattern**: File change frequency and PR size
 
-### Four Keys (In Development)
+### Four Keys
 
-DevOps Four Keys metrics measurement feature (to be implemented)
+DevOps Four Keys metrics measurement and visualization:
+
+1. **Deployment Frequency** - Measured based on merged PRs
+2. **Lead Time for Changes** - Time from PR creation to merge
+3. **Change Failure Rate** - Percentage of PRs with failure indicators
+4. **Time to Restore Service (MTTR)** - Time to fix failure PRs
+
+#### 📊 Accurately Measurable Metrics
+
+The following metrics can be **accurately measured** from PR data:
+
+- ✅ **Deployment Frequency**: Counts MERGED PRs as "deployments"
+  - Assumption: PR merge = deployment
+  - Unit: deployments per week
+  
+- ✅ **Lead Time for Changes**: Time from PR creation to merge (median)
+  - Unit: days
+  - Note: Time from commit to PR creation is not included
+
+#### ⚠️ Estimated Metrics
+
+The following metrics are **estimated** from PR data:
+
+- ⚠️ **Change Failure Rate**: PRs with the following keywords are classified as "failures"
+  - Keywords: `revert`, `hotfix`, `urgent`, `fix`, `rollback`, `emergency`, `critical`
+  - Limitation: May differ from actual incidents
+  - Customizable: Keywords can be adjusted per project
+  
+- ⚠️ **Time to Restore Service (MTTR)**: Time from "failure" PR creation to merge (median)
+  - Limitation: Differs from actual time from incident detection to recovery
+  - Ideal: Integration with incident management systems recommended
+
+#### 🔧 For More Accurate Measurement
+
+For more accurate Four Keys measurement, integration with the following is recommended:
+
+1. **CI/CD Systems**: Record actual deployment events
+2. **Incident Management Tools**: PagerDuty, Opsgenie, etc.
+3. **Monitoring Tools**: Record incident detection and recovery times
+4. **Project-specific Labels/Tags**: Accurately identify failure PRs
+
+#### 📈 DORA Level Classification
+
+Each metric is evaluated on a 4-level scale based on DORA (DevOps Research and Assessment) standards:
+
+- **Elite**: Industry-leading performance
+- **High**: High performance
+- **Medium**: Medium performance
+- **Low**: Needs improvement
+
+#### References
+
+- [DORA Research](https://www.devops-research.com/research.html)
+- [Google Cloud - Four Keys Project](https://github.com/GoogleCloudPlatform/fourkeys)
+- [Accelerate (book)](https://itrevolution.com/product/accelerate/)
 
 ## Data Flow
 

@@ -232,9 +232,63 @@ schedule:
 6. **レビュー速度**: マージまでの時間分析
 7. **変更パターン**: ファイル変更頻度とPR規模
 
-### Four Keys（開発中）
+### Four Keys
 
-DevOps Four Keysメトリクスの測定機能（今後実装予定）
+DevOps Four Keysメトリクスの測定と可視化:
+
+1. **Deployment Frequency (デプロイ頻度)** - マージされたPRを基に計測
+2. **Lead Time for Changes (変更のリードタイム)** - PR作成からマージまでの時間
+3. **Change Failure Rate (変更失敗率)** - 失敗を示すキーワードを持つPRの割合
+4. **Time to Restore Service (MTTR)** - 失敗PRの復旧時間
+
+#### 📊 計測可能な指標
+
+以下の指標はPRデータから**正確に計測可能**です：
+
+- ✅ **Deployment Frequency**: MERGEDステータスのPRを「デプロイ」として計測
+  - 前提: PRのマージ = デプロイと仮定
+  - 単位: 週あたりのデプロイ回数
+  
+- ✅ **Lead Time for Changes**: PR作成からマージまでの時間（中央値）
+  - 単位: 日
+  - 注意: コミットからPR作成までの時間は含まれません
+
+#### ⚠️ 推定値となる指標
+
+以下の指標はPRデータから**推定計測**されます：
+
+- ⚠️ **Change Failure Rate**: 以下のキーワードを含むPRを「失敗」として判定
+  - キーワード: `revert`, `hotfix`, `urgent`, `fix`, `rollback`, `emergency`, `critical`
+  - 制約: 実際のインシデントと異なる場合があります
+  - カスタマイズ: プロジェクトに応じてキーワードを調整可能
+  
+- ⚠️ **Time to Restore Service (MTTR)**: 「失敗」PRの作成からマージまでの時間（中央値）
+  - 制約: 実際の障害検知から復旧完了までの時間とは異なります
+  - 理想: インシデント管理システムとの連携が推奨
+
+#### 🔧 より正確な計測のために
+
+より正確なFour Keys測定を実現するには、以下の連携が推奨されます：
+
+1. **CI/CDシステム**: 実際のデプロイイベントを記録
+2. **インシデント管理ツール**: PagerDuty, Opsgenie等
+3. **モニタリングツール**: 障害の検知と復旧時刻を記録
+4. **プロジェクト固有のラベル/タグ**: 失敗PRを正確に識別
+
+#### 📈 DORA レベル分類
+
+各メトリクスは DORA (DevOps Research and Assessment) の基準に基づいて4段階で評価されます：
+
+- **Elite**: 業界トップレベル
+- **High**: 高パフォーマンス
+- **Medium**: 中程度のパフォーマンス  
+- **Low**: 改善が必要
+
+#### 参考資料
+
+- [DORA Research](https://www.devops-research.com/research.html)
+- [Google Cloud - Four Keys Project](https://github.com/GoogleCloudPlatform/fourkeys)
+- [Accelerate (書籍)](https://itrevolution.com/product/accelerate/)
 
 ## データフロー
 

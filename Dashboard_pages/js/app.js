@@ -78,6 +78,10 @@ function navigateToPage(pageName) {
             loadDashboardData();
         } else if (pageName === 'analytics') {
             loadAnalyticsData();
+        } else if (pageName === 'fourkeys') {
+            if (typeof initializeFourKeysPage === 'function') {
+                initializeFourKeysPage();
+            }
         }
     }
 }
