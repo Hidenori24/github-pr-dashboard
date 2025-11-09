@@ -49,6 +49,10 @@
                         <span class="nav-icon">📊</span>
                         <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
                     </a>
+                    <a href="#issues" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
                 </nav>
             </div>
         </aside>
@@ -583,6 +587,69 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Issues Page -->
+            <div id="page-issues" class="page">
+                <h1 data-i18n="issues.title">🎯 Issue管理・分析</h1>
+                <p class="page-description" data-i18n="issues.description">
+                    Issueの追跡、サイクルタイム分析、マイルストーン管理、チーム速度の可視化
+                </p>
+
+                <!-- Tabs -->
+                <div class="tabs">
+                    <button class="tab active" data-tab="overview" onclick="switchIssuesTab('overview')" data-i18n="issues.tab.overview">概要</button>
+                    <button class="tab" data-tab="timeline" onclick="switchIssuesTab('timeline')" data-i18n="issues.tab.timeline">タイムライン</button>
+                    <button class="tab" data-tab="cycle-time" onclick="switchIssuesTab('cycle-time')" data-i18n="issues.tab.cycle_time">サイクルタイム</button>
+                    <button class="tab" data-tab="issue-pr-link" onclick="switchIssuesTab('issue-pr-link')" data-i18n="issues.tab.issue_pr">Issue-PR連携</button>
+                    <button class="tab" data-tab="milestone" onclick="switchIssuesTab('milestone')" data-i18n="issues.tab.milestone">マイルストーン</button>
+                    <button class="tab" data-tab="velocity" onclick="switchIssuesTab('velocity')" data-i18n="issues.tab.velocity">チーム速度</button>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Overview Tab -->
+                    <div id="tab-overview" class="tab-panel active">
+                        <div id="issuesOverviewCharts">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Timeline Tab -->
+                    <div id="tab-timeline" class="tab-panel">
+                        <div id="issuesTimelineChart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Cycle Time Tab -->
+                    <div id="tab-cycle-time" class="tab-panel">
+                        <div id="cycleTimeChart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Issue-PR Link Tab -->
+                    <div id="tab-issue-pr-link" class="tab-panel">
+                        <div id="issuePRLinkChart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Milestone Tab -->
+                    <div id="tab-milestone" class="tab-panel">
+                        <div id="milestoneChart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Velocity Tab -->
+                    <div id="tab-velocity" class="tab-panel">
+                        <div id="velocityChart">
+                            <div class="loading">Loading...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -592,5 +659,6 @@
     <script src="js/analytics.js"></script>
     <script src="js/fourkeys.js"></script>
     <script src="js/statistics.js"></script>
+    <script src="js/issues.js"></script>
 </body>
 </html>

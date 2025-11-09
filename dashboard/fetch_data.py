@@ -23,7 +23,7 @@ script_dir = Path(__file__).parent
 sys.path.insert(0, str(script_dir))
 
 import config
-from fetcher import run_query
+from fetcher import run_query, run_issue_query
 import db_cache
 
 
@@ -35,13 +35,21 @@ def parse_repo_arg(repo_arg: str) -> tuple[str, str]:
     return config.DEFAULT_OWNER, repo_arg
 
 
-def fetch_repository(owner: str, repo: str, days: int = 365, force: bool = False) -> dict:
+def fetch_repository(owner: str, repo: str, days: int = 365, force: bool = False, fetch_issues: bool = True) -> dict:
     """単一リポジトリのデータを取得"""
     print(f"Fetching: {owner}/{repo}")
     
     cutoff_dt = datetime.now(timezone.utc) - timedelta(days=days)
+    result = {
+        "owner": owner,
+        "repo": repo,
+        "pr_status": "empty",
+        "pr_count": 0,
+        "issue_status": "empty",
+        "issue_count": 0
+    }
     
-    # ETag情報を取得
+    # Fetch PRs
     etag_info = db_cache.get_etag(owner, repo) if not force else None
     
     try:
@@ -60,43 +68,52 @@ def fetch_repository(owner: str, repo: str, days: int = 365, force: bool = False
             db_cache.save_etag(owner, repo, new_etag, new_last_modified)
         
         if is_modified and pr_list:
-            # 変更あり → DBに保存
             db_cache.save_prs(owner, repo, pr_list)
             print(f"   Saved {len(pr_list)} PRs (updated)")
-            return {
-                "status": "updated",
-                "count": len(pr_list),
-                "owner": owner,
-                "repo": repo
-            }
+            result["pr_status"] = "updated"
+            result["pr_count"] = len(pr_list)
         elif not is_modified:
-            # 変更なし
             cached_data = db_cache.load_prs(owner, repo)
             print(f"   No changes (cached: {len(cached_data)} PRs)")
-            return {
-                "status": "unchanged",
-                "count": len(cached_data),
-                "owner": owner,
-                "repo": repo
-            }
+            result["pr_status"] = "unchanged"
+            result["pr_count"] = len(cached_data)
         else:
-            # 空の場合
-            print(f"   No data returned")
-            return {
-                "status": "empty",
-                "count": 0,
-                "owner": owner,
-                "repo": repo
-            }
+            print(f"   No PR data returned")
             
     except Exception as e:
-        print(f"   Error: {str(e)}")
-        return {
-            "status": "error",
-            "error": str(e),
-            "owner": owner,
-            "repo": repo
-        }
+        print(f"   PR Error: {str(e)}")
+        result["pr_status"] = "error"
+        result["pr_error"] = str(e)
+    
+    # Fetch Issues
+    if fetch_issues:
+        try:
+            issue_list = run_issue_query(owner, repo, cutoff_dt=cutoff_dt)
+            
+            if issue_list:
+                db_cache.save_issues(owner, repo, issue_list)
+                print(f"   Saved {len(issue_list)} Issues")
+                result["issue_status"] = "updated"
+                result["issue_count"] = len(issue_list)
+            else:
+                print(f"   No issue data returned")
+                
+        except Exception as e:
+            print(f"   Issue Error: {str(e)}")
+            result["issue_status"] = "error"
+            result["issue_error"] = str(e)
+    
+    # Overall status
+    if result["pr_status"] == "error" and result["issue_status"] == "error":
+        result["status"] = "error"
+    elif "updated" in [result["pr_status"], result["issue_status"]]:
+        result["status"] = "updated"
+    elif "unchanged" in [result["pr_status"], result["issue_status"]]:
+        result["status"] = "unchanged"
+    else:
+        result["status"] = "empty"
+    
+    return result
 
 
 def main():
@@ -189,8 +206,10 @@ def main():
     for result in results:
         if result['status'] in ['updated', 'unchanged']:
             cache_info = db_cache.get_cache_info(result['owner'], result['repo'])
-            if cache_info:
-                print(f"{result['owner']}/{result['repo']}: {cache_info['count']} PRs in cache")
+            issue_info = db_cache.get_issue_cache_info(result['owner'], result['repo'])
+            pr_count = cache_info['count'] if cache_info else 0
+            issue_count = issue_info['count'] if issue_info else 0
+            print(f"{result['owner']}/{result['repo']}: {pr_count} PRs, {issue_count} Issues in cache")
     
     # エラーがあれば終了コード1
     if any(r['status'] == 'error' for r in results):

@@ -93,6 +93,23 @@ def init_db():
         ON dir_stats_cache(owner, repo, last_activity DESC)
     """)
     
+    # Issue cache table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS issue_cache (
+            owner TEXT NOT NULL,
+            repo TEXT NOT NULL,
+            issue_number INTEGER NOT NULL,
+            data TEXT NOT NULL,
+            fetched_at TEXT NOT NULL,
+            PRIMARY KEY (owner, repo, issue_number)
+        )
+    """)
+    
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_issue_fetched_at 
+        ON issue_cache(owner, repo, fetched_at)
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -463,4 +480,80 @@ def clear_file_caches(owner: str, repo: str) -> int:
     conn.close()
     
     return deleted_tree + deleted_stats
+
+
+def save_issues(owner: str, repo: str, issue_list: List[Dict]) -> None:
+    """Save issue data to DB (UPSERT)"""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    for issue in issue_list:
+        issue_number = issue.get("number")
+        if not issue_number:
+            continue
+            
+        cursor.execute("""
+            INSERT OR REPLACE INTO issue_cache 
+            (owner, repo, issue_number, data, fetched_at)
+            VALUES (?, ?, ?, ?, ?)
+        """, (owner, repo, issue_number, json.dumps(issue), now))
+    
+    conn.commit()
+    conn.close()
+
+
+def load_issues(owner: str, repo: str, max_age_hours: Optional[int] = None) -> List[Dict]:
+    """Load issue data from DB"""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    if max_age_hours:
+        cutoff = datetime.now(timezone.utc).timestamp() - (max_age_hours * 3600)
+        cutoff_iso = datetime.fromtimestamp(cutoff, tz=timezone.utc).isoformat()
+        
+        cursor.execute("""
+            SELECT data FROM issue_cache 
+            WHERE owner = ? AND repo = ? AND fetched_at >= ?
+            ORDER BY issue_number DESC
+        """, (owner, repo, cutoff_iso))
+    else:
+        cursor.execute("""
+            SELECT data FROM issue_cache 
+            WHERE owner = ? AND repo = ?
+            ORDER BY issue_number DESC
+        """, (owner, repo))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [json.loads(row[0]) for row in rows]
+
+
+def get_issue_cache_info(owner: str, repo: str) -> Optional[Dict]:
+    """Get issue cache information"""
+    init_db()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT COUNT(*), MAX(fetched_at), MIN(fetched_at)
+        FROM issue_cache 
+        WHERE owner = ? AND repo = ?
+    """, (owner, repo))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row or row[0] == 0:
+        return None
+    
+    return {
+        "count": row[0],
+        "latest_fetch": row[1],
+        "oldest_fetch": row[2]
+    }
 
