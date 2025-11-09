@@ -22,11 +22,11 @@ GitHub Actions periodically fetches PR data and saves it as JSON files, which ar
 
 ### Available Pages
 
-1. **🏠 Home**: Repository selection and feature overview
-2. **📊 PR Dashboard**: PR timeline visualization and action tracking
-3. **📈 PR Analysis**: 7 analysis tabs (stagnation, blocker, reviewer, trend, bottleneck, speed, change patterns)
-4. **🔑 Four Keys**: Performance measurement using DORA Metrics
-5. **📊 Statistics & Reports**: Comprehensive statistics and weekly report generation
+1. **Home**: Repository selection and feature overview
+2. **PR Dashboard**: PR timeline visualization and action tracking
+3. **PR Analysis**: 7 analysis tabs (stagnation, blocker, reviewer, trend, bottleneck, speed, change patterns)
+4. **Four Keys**: Performance measurement using DORA Metrics
+5. **Statistics & Reports**: Comprehensive statistics and weekly report generation
 
 ## Directory Structure
 
@@ -246,49 +246,49 @@ schedule:
 6. **Review Speed**: Time analysis from creation to merge
 7. **Change Pattern**: File change frequency and PR size
 
-### Four Keys 🆕
+### Four Keys
 
 DevOps Four Keys metrics measurement and visualization with **modern UI implementation**:
 
-**✨ New Design:**
+**New Design:**
 - Colorful metric cards with icons and gradients
 - Color-coded by DORA levels (Elite: green, High: blue, Medium: yellow, Low: red)
 - Hover animations and smooth transitions
 - Responsive design for all devices
 
-**📊 Four Key Metrics:**
+**Four Key Metrics:**
 
 1. **Deployment Frequency** - Measured based on merged PRs
 2. **Lead Time for Changes** - Time from PR creation to merge
 3. **Change Failure Rate** - Percentage of PRs with failure indicators
 4. **Time to Restore Service (MTTR)** - Time to fix failure PRs
 
-#### 📊 Accurately Measurable Metrics
+#### Accurately Measurable Metrics
 
 The following metrics can be **accurately measured** from PR data:
 
-- ✅ **Deployment Frequency**: Counts MERGED PRs as "deployments"
+- **Deployment Frequency**: Counts MERGED PRs as "deployments"
   - Assumption: PR merge = deployment
   - Unit: deployments per week
   
-- ✅ **Lead Time for Changes**: Time from PR creation to merge (median)
+- **Lead Time for Changes**: Time from PR creation to merge (median)
   - Unit: days
   - Note: Time from commit to PR creation is not included
 
-#### ⚠️ Estimated Metrics
+#### Estimated Metrics
 
 The following metrics are **estimated** from PR data:
 
-- ⚠️ **Change Failure Rate**: PRs with the following keywords are classified as "failures"
+- **Change Failure Rate**: PRs with the following keywords are classified as "failures"
   - Keywords: `revert`, `hotfix`, `urgent`, `fix`, `rollback`, `emergency`, `critical`
   - Limitation: May differ from actual incidents
   - Customizable: Keywords can be adjusted per project
   
-- ⚠️ **Time to Restore Service (MTTR)**: Time from "failure" PR creation to merge (median)
+- **Time to Restore Service (MTTR)**: Time from "failure" PR creation to merge (median)
   - Limitation: Differs from actual time from incident detection to recovery
   - Ideal: Integration with incident management systems recommended
 
-#### 🔧 For More Accurate Measurement
+#### For More Accurate Measurement
 
 For more accurate Four Keys measurement, integration with the following is recommended:
 
@@ -297,7 +297,7 @@ For more accurate Four Keys measurement, integration with the following is recom
 3. **Monitoring Tools**: Record incident detection and recovery times
 4. **Project-specific Labels/Tags**: Accurately identify failure PRs
 
-#### 📈 DORA Level Classification
+#### DORA Level Classification
 
 Each metric is evaluated on a 4-level scale based on DORA (DevOps Research and Assessment) standards:
 
@@ -312,27 +312,27 @@ Each metric is evaluated on a 4-level scale based on DORA (DevOps Research and A
 - [Google Cloud - Four Keys Project](https://github.com/GoogleCloudPlatform/fourkeys)
 - [Accelerate (book)](https://itrevolution.com/product/accelerate/)
 
-### Statistics & Reports 📊
+### Statistics & Reports
 
 Provides comprehensive statistics to understand current development processes and find opportunities for improvement.
 
-**📅 Period Summary:**
+**Period Summary:**
 - Total PRs and merge rate
 - Average lead time
 - Active developers
 - Comparison with previous period
 
-**📈 Trend Analysis (Past 8 weeks):**
+**Trend Analysis (Past 8 weeks):**
 - PR creation trends
 - Average lead time trends
 - Visualization with charts
 
-**👥 Review Activity:**
+**Review Activity:**
 - Total reviews
 - Total comments
 - Averages per PR
 
-**💡 Automated Insights:**
+**Automated Insights:**
 Automatically generates insights from statistical data:
 - Detection of increased/decreased development activity
 - Analysis of review speed improvements/delays
@@ -340,14 +340,14 @@ Automatically generates insights from statistical data:
 - Monitoring of review activity
 - Alerts for stagnant PRs
 
-**🎯 Improvement Suggestions:**
+**Improvement Suggestions:**
 Proposes concrete improvement actions based on current issues:
 - Methods to reduce review time
 - Fostering review culture
 - Strategies to improve PR completion rate
 - Promoting team collaboration
 
-**📄 Weekly Report Export:**
+**Weekly Report Export:**
 - Markdown-formatted report generation
 - Summary of key metrics
 - Comparison with previous week

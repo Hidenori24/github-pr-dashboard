@@ -96,13 +96,13 @@ For detailed documentation, see `dashboard/README.md`.
 
 ## Main Features
 
-### 🎯 Dashboard Features
+### Dashboard Features
 - **Multi-Repository Support**: Manage multiple repositories centrally
 - **PR Timeline**: Visually track PR progress with Gantt charts
 - **Documentation/Code Analysis**: PR timeline by directory
 - **Action Tracking**: Auto-detect PRs awaiting review/fixes (business day-based)
 
-### 📊 Analysis Features (7 Analysis Tabs)
+### Analysis Features (7 Analysis Tabs)
 - **Stagnation Analysis**: Distribution of open PR durations
 - **Blocker Analysis**: Estimation of reasons for unclosed PRs
 - **Reviewer Analysis**: Review activity and comment response status
@@ -111,13 +111,13 @@ For detailed documentation, see `dashboard/README.md`.
 - **Review Speed**: Time-to-merge analysis
 - **Change Patterns**: File change frequency and PR size
 
-### 🔑 Four Keys Metrics
+### Four Keys Metrics
 - **Deployment Frequency**: Number of deployments per week
 - **Lead Time for Changes**: Time from PR creation to merge
 - **Change Failure Rate**: Percentage of failed PRs
 - **Time to Restore Service**: Mean Time To Recovery (MTTR)
 
-### 📈 Statistics & Reports
+### Statistics & Reports
 - **Period Summary**: Total PRs, merge rate, average lead time, active developers
 - **Trend Analysis**: 8-week trends for PR creation and average lead time
 - **Review Activity**: Total reviews, comments, averages per PR
@@ -125,7 +125,7 @@ For detailed documentation, see `dashboard/README.md`.
 - **Improvement Suggestions**: Concrete action proposals based on data
 - **Weekly Report Export**: Markdown-formatted report generation
 
-### ⚡ Performance
+### Performance
 - **Fast Display**: Local cache enables sub-0.1 second display speeds
 - **Auto Update**: Periodic data updates via GitHub Actions
 - **Rate Limit Protection**: Efficient API calls using ETag/Last-Modified headers

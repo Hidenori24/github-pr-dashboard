@@ -6,19 +6,19 @@ An integrated Streamlit dashboard for visualizing and analyzing GitHub PRs
 
 ## Key Features
 
-### 🏠 Home
+### Home
 - Select primary repository
 - Display data cache status
 - Navigation to each page
 - Toggle dark mode
 
-### 📊 PR Dashboard
+### PR Dashboard
 - **PR Timeline**: Gantt chart visualization
 - **Documentation/Code Analysis**: PR timeline by directory
 - **Action Tracking**: Auto-detect PRs awaiting review/fixes (business day-based)
 - **Metrics**: Open/Merged/Closed counts, average merge time
 
-### 📈 PR Analysis (7 Analysis Tabs)
+### PR Analysis (7 Analysis Tabs)
 - **Stagnation Analysis**: Distribution of open PR durations
 - **Blocker Analysis**: Estimation of reasons for unclosed PRs
 - **Reviewer Analysis**: Review activity and comment response status
@@ -27,13 +27,13 @@ An integrated Streamlit dashboard for visualizing and analyzing GitHub PRs
 - **Review Speed**: Time-to-merge analysis
 - **Change Patterns**: File change frequency and PR size
 
-### 🔑 Four Keys (DORA Metrics)
+### Four Keys (DORA Metrics)
 - **Deployment Frequency**: Deployments per week
 - **Lead Time for Changes**: Time from PR creation to merge
 - **Change Failure Rate**: Percentage of failed PRs
 - **Time to Restore Service**: Mean Time To Recovery (MTTR)
 
-### 📊 Statistics & Reports
+### Statistics & Reports
 - **Period Summary**: Total PRs, merge rate, average lead time, active developers
 - **Trend Analysis**: 8-week trends for PR creation and average lead time
 - **Review Activity**: Total reviews, comments, averages per PR
