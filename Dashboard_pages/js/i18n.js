@@ -67,6 +67,12 @@ const i18n = {
             'analytics.reviewer.desc': 'レビューアクティビティ分析',
             'analytics.trend': 'トレンド分析',
             'analytics.trend.desc': '週次PR作成数推移',
+            'analytics.bottleneck': 'ボトルネック分析',
+            'analytics.bottleneck.desc': 'レビュー待ち/修正待ちの詳細',
+            'analytics.speed': 'レビュー速度',
+            'analytics.speed.desc': 'マージまでの時間分析',
+            'analytics.pattern': '変更パターン',
+            'analytics.pattern.desc': 'ファイル変更頻度とPR規模',
             'analytics.open': 'PR分析を開く',
             
             // Four Keys
@@ -187,6 +193,12 @@ const i18n = {
             'analytics.reviewer.desc': 'Analyze review activity',
             'analytics.trend': 'Trend Analysis',
             'analytics.trend.desc': 'Weekly PR creation trends',
+            'analytics.bottleneck': 'Bottleneck Analysis',
+            'analytics.bottleneck.desc': 'Review wait / fix wait details',
+            'analytics.speed': 'Review Speed',
+            'analytics.speed.desc': 'Time to merge analysis',
+            'analytics.pattern': 'Change Pattern',
+            'analytics.pattern.desc': 'File change frequency and PR size',
             'analytics.open': 'Open PR Analytics',
             
             // Four Keys
