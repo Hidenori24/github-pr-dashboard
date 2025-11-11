@@ -552,68 +552,68 @@ else:
     # 期間設定 (現在の期間モード)
     now = datetime.now(timezone.utc)
     if report_period == "今週":
-    # 今週の月曜日から今日まで
-    week_start = now - timedelta(days=now.weekday())
-    week_end = now
-    prev_week_start = week_start - timedelta(days=7)
-    prev_week_end = week_start
-    period_days = 7
-elif report_period == "先週":
-    # 先週の月曜日から日曜日まで
-    week_start = now - timedelta(days=now.weekday() + 7)
-    week_end = week_start + timedelta(days=7)
-    prev_week_start = week_start - timedelta(days=7)
-    prev_week_end = week_start
-    period_days = 7
-elif report_period == "今月":
-    # 今月の1日から今日まで
-    week_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    week_end = now
-    # 前月の同じ期間
-    if week_start.month == 1:
-        prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
-    else:
-        prev_week_start = week_start.replace(month=week_start.month - 1)
-    prev_week_end = prev_week_start + (week_end - week_start)
-    period_days = (week_end - week_start).days
-elif report_period == "先月":
-    # 先月の1日から末日まで
-    first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    if first_day.month == 1:
-        week_start = first_day.replace(year=first_day.year - 1, month=12)
-    else:
-        week_start = first_day.replace(month=first_day.month - 1)
-    week_end = first_day
-    # 前々月
-    if week_start.month == 1:
-        prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
-    else:
-        prev_week_start = week_start.replace(month=week_start.month - 1)
-    prev_week_end = week_start
-    period_days = (week_end - week_start).days
-elif report_period == "過去30日":
-    week_start = now - timedelta(days=30)
-    week_end = now
-    prev_week_start = week_start - timedelta(days=30)
-    prev_week_end = week_start
-    period_days = 30
-else:  # 過去90日
-    week_start = now - timedelta(days=90)
-    week_end = now
-    prev_week_start = week_start - timedelta(days=90)
-    prev_week_end = week_start
-    period_days = 90
-
-# 期間でフィルタ
-current_week_df = df_all[
-    (df_all['createdAt_dt'] >= week_start) & 
-    (df_all['createdAt_dt'] < week_end)
-].copy()
-
-previous_week_df = df_all[
-    (df_all['createdAt_dt'] >= prev_week_start) & 
-    (df_all['createdAt_dt'] < prev_week_end)
-].copy()
+        # 今週の月曜日から今日まで
+        week_start = now - timedelta(days=now.weekday())
+        week_end = now
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = week_start
+        period_days = 7
+    elif report_period == "先週":
+        # 先週の月曜日から日曜日まで
+        week_start = now - timedelta(days=now.weekday() + 7)
+        week_end = week_start + timedelta(days=7)
+        prev_week_start = week_start - timedelta(days=7)
+        prev_week_end = week_start
+        period_days = 7
+    elif report_period == "今月":
+        # 今月の1日から今日まで
+        week_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        week_end = now
+        # 前月の同じ期間
+        if week_start.month == 1:
+            prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
+        else:
+            prev_week_start = week_start.replace(month=week_start.month - 1)
+        prev_week_end = prev_week_start + (week_end - week_start)
+        period_days = (week_end - week_start).days
+    elif report_period == "先月":
+        # 先月の1日から末日まで
+        first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        if first_day.month == 1:
+            week_start = first_day.replace(year=first_day.year - 1, month=12)
+        else:
+            week_start = first_day.replace(month=first_day.month - 1)
+        week_end = first_day
+        # 前々月
+        if week_start.month == 1:
+            prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
+        else:
+            prev_week_start = week_start.replace(month=week_start.month - 1)
+        prev_week_end = week_start
+        period_days = (week_end - week_start).days
+    elif report_period == "過去30日":
+        week_start = now - timedelta(days=30)
+        week_end = now
+        prev_week_start = week_start - timedelta(days=30)
+        prev_week_end = week_start
+        period_days = 30
+    else:  # 過去90日
+        week_start = now - timedelta(days=90)
+        week_end = now
+        prev_week_start = week_start - timedelta(days=90)
+        prev_week_end = week_start
+        period_days = 90
+    
+    # 期間でフィルタ
+    current_week_df = df_all[
+        (df_all['createdAt_dt'] >= week_start) & 
+        (df_all['createdAt_dt'] < week_end)
+    ].copy()
+    
+    previous_week_df = df_all[
+        (df_all['createdAt_dt'] >= prev_week_start) & 
+        (df_all['createdAt_dt'] < prev_week_end)
+    ].copy()
     
     # 統計生成
     stats = generate_weekly_statistics(df_all, current_week_df, previous_week_df)
@@ -946,46 +946,46 @@ if view_mode == "現在の期間":
         st.markdown("#### PR作成者別統計")
         
         if not current_week_df.empty:
-        author_stats = current_week_df.groupby('author').agg({
-            'number': 'count',
-            'state': lambda x: (x == 'MERGED').sum()
-        }).reset_index()
-        author_stats.columns = ['作成者', 'PR数', 'マージ数']
-        author_stats['マージ率'] = (author_stats['マージ数'] / author_stats['PR数'] * 100).round(1)
-        author_stats = author_stats.sort_values('PR数', ascending=False)
+            author_stats = current_week_df.groupby('author').agg({
+                'number': 'count',
+                'state': lambda x: (x == 'MERGED').sum()
+            }).reset_index()
+            author_stats.columns = ['作成者', 'PR数', 'マージ数']
+            author_stats['マージ率'] = (author_stats['マージ数'] / author_stats['PR数'] * 100).round(1)
+            author_stats = author_stats.sort_values('PR数', ascending=False)
+            
+            st.dataframe(
+                author_stats,
+                use_container_width=True,
+                height=300
+            )
+        else:
+            st.info("データがありません")
         
-        st.dataframe(
-            author_stats,
-            use_container_width=True,
-            height=300
-        )
-    else:
-        st.info("データがありません")
-    
-    st.markdown("#### レビュワー別統計")
-    
-    reviewer_activities = []
-    for _, row in current_week_df.iterrows():
-        review_details = row.get("review_details", [])
-        if isinstance(review_details, list):
-            for review in review_details:
-                reviewer = review.get("author")
-                if reviewer:
-                    reviewer_activities.append({
-                        "レビュワー": reviewer,
-                        "PR#": row["number"],
-                        "状態": review.get("state")
-                    })
-    
-    if reviewer_activities:
-        reviewer_df = pd.DataFrame(reviewer_activities)
-        reviewer_stats = reviewer_df.groupby('レビュワー').agg({
-            'PR#': 'nunique',
-            '状態': 'count'
-        }).reset_index()
-        reviewer_stats.columns = ['レビュワー', 'レビューしたPR数', '総レビュー回数']
-        reviewer_stats = reviewer_stats.sort_values('レビューしたPR数', ascending=False)
+        st.markdown("#### レビュワー別統計")
         
+        reviewer_activities = []
+        for _, row in current_week_df.iterrows():
+            review_details = row.get("review_details", [])
+            if isinstance(review_details, list):
+                for review in review_details:
+                    reviewer = review.get("author")
+                    if reviewer:
+                        reviewer_activities.append({
+                            "レビュワー": reviewer,
+                            "PR#": row["number"],
+                            "状態": review.get("state")
+                        })
+        
+        if reviewer_activities:
+            reviewer_df = pd.DataFrame(reviewer_activities)
+            reviewer_stats = reviewer_df.groupby('レビュワー').agg({
+                'PR#': 'nunique',
+                '状態': 'count'
+            }).reset_index()
+            reviewer_stats.columns = ['レビュワー', 'レビューしたPR数', '総レビュー回数']
+            reviewer_stats = reviewer_stats.sort_values('レビューしたPR数', ascending=False)
+            
             st.dataframe(
                 reviewer_stats,
                 use_container_width=True,
