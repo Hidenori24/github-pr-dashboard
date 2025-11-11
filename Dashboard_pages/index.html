@@ -469,6 +469,15 @@
                 <!-- Controls -->
                 <div class="statistics-controls">
                     <div class="control-group">
+                        <label for="viewModeSelect">表示モード:</label>
+                        <select id="viewModeSelect" class="form-select">
+                            <option value="current">現在の期間</option>
+                            <option value="historical-weekly">過去週単位</option>
+                            <option value="historical-monthly">過去月単位</option>
+                            <option value="historical-yearly">過去年単位</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
                         <label for="periodSelect" data-i18n="statistics.period">レポート期間:</label>
                         <select id="periodSelect" class="form-select">
                             <option value="thisWeek">今週</option>
@@ -477,6 +486,11 @@
                             <option value="lastMonth">先月</option>
                             <option value="last30days">過去30日</option>
                             <option value="last90days">過去90日</option>
+                        </select>
+                    </div>
+                    <div id="historicalSelectContainer" class="control-group" style="display: none;">
+                        <label for="historicalSelect">選択:</label>
+                        <select id="historicalSelect" class="form-select">
                         </select>
                     </div>
                     <button id="downloadReport" class="btn btn-primary" data-i18n="statistics.download">

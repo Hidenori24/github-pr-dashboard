@@ -3,16 +3,43 @@
 // Global variables
 let currentPeriod = 'thisWeek';
 let weeklyStats = null;
+let historicalData = null;
+let viewMode = 'current'; // 'current' or 'historical'
 
 // Initialize statistics page
 function initStatisticsPage() {
     console.log('Initializing statistics page...');
+    loadHistoricalData();
     loadStatisticsData();
     setupEventListeners();
 }
 
+// Load historical statistics data
+async function loadHistoricalData() {
+    try {
+        const response = await fetch('data/historical_statistics.json');
+        if (response.ok) {
+            historicalData = await response.json();
+            console.log('Historical data loaded:', historicalData);
+        } else {
+            console.warn('Historical data not available, using current data only');
+        }
+    } catch (error) {
+        console.warn('Could not load historical data:', error);
+    }
+}
+
 // Setup event listeners
 function setupEventListeners() {
+    // View mode selector
+    const viewModeSelect = document.getElementById('viewModeSelect');
+    if (viewModeSelect) {
+        viewModeSelect.addEventListener('change', (e) => {
+            viewMode = e.target.value;
+            handleViewModeChange();
+        });
+    }
+    
     // Period selector
     const periodSelect = document.getElementById('periodSelect');
     if (periodSelect) {
@@ -22,11 +49,305 @@ function setupEventListeners() {
         });
     }
     
+    // Historical period selector
+    const historicalSelect = document.getElementById('historicalSelect');
+    if (historicalSelect) {
+        historicalSelect.addEventListener('change', (e) => {
+            loadHistoricalPeriodData();
+        });
+    }
+    
     // Report download button
     const downloadBtn = document.getElementById('downloadReport');
     if (downloadBtn) {
         downloadBtn.addEventListener('click', downloadWeeklyReport);
     }
+}
+
+// Handle view mode change
+function handleViewModeChange() {
+    const periodSelectContainer = document.getElementById('periodSelect').parentElement;
+    const historicalSelectContainer = document.getElementById('historicalSelectContainer');
+    
+    if (viewMode === 'current') {
+        // Show current period selector
+        periodSelectContainer.style.display = 'block';
+        historicalSelectContainer.style.display = 'none';
+        loadStatisticsData();
+    } else {
+        // Show historical selector
+        periodSelectContainer.style.display = 'none';
+        historicalSelectContainer.style.display = 'block';
+        populateHistoricalSelector();
+        loadHistoricalPeriodData();
+    }
+}
+
+// Populate historical period selector
+function populateHistoricalSelector() {
+    const historicalSelect = document.getElementById('historicalSelect');
+    if (!historicalSelect || !historicalData) return;
+    
+    historicalSelect.innerHTML = '';
+    
+    if (viewMode === 'historical-weekly') {
+        historicalData.weekly.forEach((week, index) => {
+            const weekStart = new Date(week.weekStart);
+            const weekEnd = new Date(week.weekEnd);
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${formatDate(weekStart)} - ${formatDate(weekEnd)} (週${historicalData.weekly.length - index})`;
+            historicalSelect.appendChild(option);
+        });
+        // Select the most recent week
+        historicalSelect.value = historicalData.weekly.length - 1;
+    } else if (viewMode === 'historical-monthly') {
+        historicalData.monthly.forEach((month, index) => {
+            const monthStart = new Date(month.monthStart);
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${monthStart.getFullYear()}年${monthStart.getMonth() + 1}月`;
+            historicalSelect.appendChild(option);
+        });
+        // Select the most recent month
+        historicalSelect.value = historicalData.monthly.length - 1;
+    } else if (viewMode === 'historical-yearly') {
+        historicalData.yearly.forEach((year, index) => {
+            const option = document.createElement('option');
+            option.value = index;
+            option.textContent = `${year.year}年`;
+            historicalSelect.appendChild(option);
+        });
+        // Select the most recent year
+        historicalSelect.value = historicalData.yearly.length - 1;
+    }
+}
+
+// Load historical period data
+function loadHistoricalPeriodData() {
+    if (!historicalData) {
+        console.error('Historical data not available');
+        return;
+    }
+    
+    const historicalSelect = document.getElementById('historicalSelect');
+    const selectedIndex = parseInt(historicalSelect.value);
+    
+    let periodData;
+    if (viewMode === 'historical-weekly') {
+        periodData = historicalData.weekly[selectedIndex];
+        displayHistoricalWeeklyData(periodData, selectedIndex);
+    } else if (viewMode === 'historical-monthly') {
+        periodData = historicalData.monthly[selectedIndex];
+        displayHistoricalMonthlyData(periodData, selectedIndex);
+    } else if (viewMode === 'historical-yearly') {
+        periodData = historicalData.yearly[selectedIndex];
+        displayHistoricalYearlyData(periodData, selectedIndex);
+    }
+}
+
+// Display historical weekly data
+function displayHistoricalWeeklyData(weekData, index) {
+    // Convert to stats format for display
+    const stats = {
+        totalPRs: weekData.totalPRs,
+        openPRs: weekData.openPRs,
+        mergedPRs: weekData.mergedPRs,
+        closedPRs: weekData.closedPRs,
+        totalChange: weekData.totalChange,
+        totalChangePct: weekData.totalChangePct,
+        avgLeadTime: weekData.avgLeadTime,
+        leadTimeChange: weekData.leadTimeChange,
+        activeAuthors: weekData.activeAuthors,
+        totalReviews: weekData.totalReviews,
+        totalComments: weekData.totalComments,
+        avgReviewsPerPR: weekData.avgReviewsPerPR,
+        avgCommentsPerPR: weekData.avgCommentsPerPR
+    };
+    
+    displaySummaryCards(stats);
+    displayHistoricalCharts(weekData);
+    displayHistoricalTrends('weekly', index);
+    displayInsights(stats, appData.prs);
+    displayRecommendations(stats);
+}
+
+// Display historical monthly data
+function displayHistoricalMonthlyData(monthData, index) {
+    const stats = {
+        totalPRs: monthData.totalPRs,
+        openPRs: monthData.openPRs,
+        mergedPRs: monthData.mergedPRs,
+        closedPRs: monthData.closedPRs,
+        totalChange: monthData.totalChange,
+        totalChangePct: 0,
+        avgLeadTime: monthData.avgLeadTime,
+        leadTimeChange: 0,
+        activeAuthors: monthData.activeAuthors,
+        totalReviews: 0,
+        totalComments: 0,
+        avgReviewsPerPR: 0,
+        avgCommentsPerPR: 0
+    };
+    
+    displaySummaryCards(stats);
+    displayHistoricalCharts(monthData);
+    displayHistoricalTrends('monthly', index);
+    displayInsights(stats, appData.prs);
+    displayRecommendations(stats);
+}
+
+// Display historical yearly data
+function displayHistoricalYearlyData(yearData, index) {
+    const stats = {
+        totalPRs: yearData.totalPRs,
+        openPRs: yearData.openPRs,
+        mergedPRs: yearData.mergedPRs,
+        closedPRs: yearData.closedPRs,
+        totalChange: 0,
+        totalChangePct: 0,
+        avgLeadTime: yearData.avgLeadTime,
+        leadTimeChange: 0,
+        activeAuthors: yearData.activeAuthors,
+        totalReviews: 0,
+        totalComments: 0,
+        avgReviewsPerPR: 0,
+        avgCommentsPerPR: 0
+    };
+    
+    displaySummaryCards(stats);
+    displayHistoricalCharts(yearData);
+    displayHistoricalTrends('yearly', index);
+    displayInsights(stats, appData.prs);
+    displayRecommendations(stats);
+}
+
+// Display historical charts
+function displayHistoricalCharts(periodData) {
+    // State distribution pie chart
+    const stateData = {
+        labels: ['OPEN', 'MERGED', 'CLOSED'],
+        values: [
+            periodData.openPRs,
+            periodData.mergedPRs,
+            periodData.closedPRs
+        ]
+    };
+    
+    const pieTrace = {
+        labels: stateData.labels,
+        values: stateData.values,
+        type: 'pie',
+        marker: {
+            colors: ['#f59e0b', '#10b981', '#6b7280']
+        },
+        textinfo: 'label+percent',
+        textposition: 'inside'
+    };
+    
+    const pieLayout = {
+        title: 'PR状態の内訳',
+        height: 300,
+        showlegend: true
+    };
+    
+    Plotly.newPlot('stateChart', [pieTrace], pieLayout, { responsive: true, displaylogo: false });
+    
+    // Review activity metrics
+    const container = document.getElementById('reviewMetrics');
+    if (container) {
+        if (periodData.totalReviews !== undefined) {
+            container.innerHTML = `
+                <div class="review-metric-item">
+                    <div class="metric-label">総レビュー数</div>
+                    <div class="metric-value">${periodData.totalReviews || 0}</div>
+                    <div class="metric-sub">PR当たり平均: ${(periodData.avgReviewsPerPR || 0).toFixed(1)}回</div>
+                </div>
+                <div class="review-metric-item">
+                    <div class="metric-label">総コメント数</div>
+                    <div class="metric-value">${periodData.totalComments || 0}</div>
+                    <div class="metric-sub">PR当たり平均: ${(periodData.avgCommentsPerPR || 0).toFixed(1)}件</div>
+                </div>
+            `;
+        } else {
+            container.innerHTML = `
+                <div class="review-metric-item">
+                    <div class="metric-label">レビュー統計</div>
+                    <div class="metric-value">N/A</div>
+                    <div class="metric-sub">この期間のデータは利用できません</div>
+                </div>
+            `;
+        }
+    }
+}
+
+// Display historical trends
+function displayHistoricalTrends(periodType, currentIndex) {
+    if (!historicalData) return;
+    
+    let dataArray, labelFormatter;
+    
+    if (periodType === 'weekly') {
+        dataArray = historicalData.weekly;
+        labelFormatter = (item) => {
+            const date = new Date(item.weekStart);
+            return `${date.getMonth() + 1}/${date.getDate()}`;
+        };
+    } else if (periodType === 'monthly') {
+        dataArray = historicalData.monthly;
+        labelFormatter = (item) => {
+            const date = new Date(item.monthStart);
+            return `${date.getFullYear()}/${date.getMonth() + 1}`;
+        };
+    } else if (periodType === 'yearly') {
+        dataArray = historicalData.yearly;
+        labelFormatter = (item) => `${item.year}`;
+    }
+    
+    // Show last 12 periods or all if less
+    const displayCount = Math.min(12, dataArray.length);
+    const startIndex = Math.max(0, dataArray.length - displayCount);
+    const displayData = dataArray.slice(startIndex);
+    
+    // PR count trend
+    const prCountTrace = {
+        x: displayData.map(labelFormatter),
+        y: displayData.map(d => d.totalPRs),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'PR数',
+        line: { color: '#3b82f6', width: 3 },
+        marker: { size: 8 }
+    };
+    
+    const prCountLayout = {
+        title: 'PR作成数の推移',
+        xaxis: { title: periodType === 'weekly' ? '週' : periodType === 'monthly' ? '月' : '年' },
+        yaxis: { title: 'PR数' },
+        height: 300
+    };
+    
+    Plotly.newPlot('trendPRChart', [prCountTrace], prCountLayout, { responsive: true, displaylogo: false });
+    
+    // Lead time trend
+    const leadTimeTrace = {
+        x: displayData.map(labelFormatter),
+        y: displayData.map(d => d.avgLeadTime),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'リードタイム',
+        line: { color: '#f59e0b', width: 3 },
+        marker: { size: 8 }
+    };
+    
+    const leadTimeLayout = {
+        title: '平均リードタイムの推移',
+        xaxis: { title: periodType === 'weekly' ? '週' : periodType === 'monthly' ? '月' : '年' },
+        yaxis: { title: 'リードタイム (日)' },
+        height: 300
+    };
+    
+    Plotly.newPlot('trendLeadTimeChart', [leadTimeTrace], leadTimeLayout, { responsive: true, displaylogo: false });
 }
 
 // Load statistics data

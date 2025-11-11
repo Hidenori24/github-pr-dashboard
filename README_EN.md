@@ -169,11 +169,32 @@ Four performance levels based on DORA Metrics:
 
 Provides comprehensive statistics to understand current development processes and find opportunities for improvement.
 
+### View Modes
+
+**🆕 Now supports historical data viewing!**
+
+Choose from 4 viewing modes:
+
+- **Current Period**: Select from this week, last week, this month, last month, last 30 days, or last 90 days
+- **Historical Weekly**: Select from the past 52 weeks (1 year) of weekly data
+- **Historical Monthly**: Select from the past 24 months (2 years) of monthly data
+- **Historical Yearly**: Select from the past 3 years of annual data
+
 ### Key Metrics
 
 - **Period Summary**: Total PRs, merge rate, average lead time, active developers
-- **Trend Analysis**: 8-week trends for PR creation and average lead time
+- **Trend Analysis**: 
+  - Current period mode: 8-week trends for PR creation and average lead time
+  - Historical weekly: 12-week trends
+  - Historical monthly: 12-month trends
+  - Historical yearly: All years trends
 - **Review Activity**: Total reviews, total comments, averages per PR
+
+### Automatic Historical Data Storage
+
+- Automatically saves historical data during GitHub Actions execution
+- Automatically calculates weekly, monthly, and yearly statistics
+- Enables long-term trend analysis
 
 ### Automated Insights
 
