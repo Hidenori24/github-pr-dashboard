@@ -112,6 +112,7 @@ else:
     )
 
 JST = ZoneInfo("Asia/Tokyo")
+HISTORICAL_DATA_PATH = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
 
 
 # NOTE: This function is defined for potential future use and may also be imported by other modules.
@@ -380,10 +381,8 @@ with st.sidebar:
         )
     elif view_mode == "過去週単位":
         # Load historical data if available
-        historical_data_path = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
-        if historical_data_path.exists():
-            import json
-            with open(historical_data_path, 'r', encoding='utf-8') as f:
+        if HISTORICAL_DATA_PATH.exists():
+            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
                 historical_data = json.load(f)
             
             weekly_options = []
@@ -403,10 +402,8 @@ with st.sidebar:
             report_period = "今週"
     elif view_mode == "過去月単位":
         # Load historical data if available
-        historical_data_path = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
-        if historical_data_path.exists():
-            import json
-            with open(historical_data_path, 'r', encoding='utf-8') as f:
+        if HISTORICAL_DATA_PATH.exists():
+            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
                 historical_data = json.load(f)
             
             monthly_options = []
@@ -425,10 +422,8 @@ with st.sidebar:
             report_period = "今月"
     elif view_mode == "過去年単位":
         # Load historical data if available
-        historical_data_path = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
-        if historical_data_path.exists():
-            import json
-            with open(historical_data_path, 'r', encoding='utf-8') as f:
+        if HISTORICAL_DATA_PATH.exists():
+            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
                 historical_data = json.load(f)
             
             yearly_options = [f"{year['year']}年" for year in historical_data['yearly']]
@@ -465,9 +460,8 @@ df_all["mergedAt_dt"] = pd.to_datetime(df_all["mergedAt"], format="ISO8601", utc
 
 # Historical data handling
 if view_mode != "現在の期間":
-    historical_data_path = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
-    if historical_data_path.exists():
-        with open(historical_data_path, 'r', encoding='utf-8') as f:
+    if HISTORICAL_DATA_PATH.exists():
+        with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
             historical_data_loaded = json.load(f)
         
         # Get selected period data
@@ -500,20 +494,22 @@ if view_mode != "現在の期間":
             week_end = pd.to_datetime(selected_data['monthEnd']).astimezone(JST)
             period_days = (week_end - week_start).days
             
+            # Note: Some metrics are set to 0 for monthly view as detailed review data
+            # is not stored in monthly aggregations to keep file size manageable
             stats = {
                 'total_prs': selected_data['totalPRs'],
                 'open_prs': selected_data['openPRs'],
                 'merged_prs': selected_data['mergedPRs'],
                 'closed_prs': selected_data['closedPRs'],
                 'total_change': selected_data['totalChange'],
-                'total_change_pct': 0,
+                'total_change_pct': 0,  # Comparison not available for monthly view
                 'avg_lead_time': selected_data['avgLeadTime'],
-                'lead_time_change': 0,
+                'lead_time_change': 0,  # Comparison not available for monthly view
                 'active_authors': selected_data['activeAuthors'],
-                'total_reviews': 0,
-                'total_comments': 0,
-                'avg_reviews_per_pr': 0,
-                'avg_comments_per_pr': 0
+                'total_reviews': 0,  # Review details not stored in monthly aggregations
+                'total_comments': 0,  # Comment details not stored in monthly aggregations
+                'avg_reviews_per_pr': 0,  # Review details not stored in monthly aggregations
+                'avg_comments_per_pr': 0  # Comment details not stored in monthly aggregations
             }
             
         else:  # 過去年単位
@@ -522,20 +518,22 @@ if view_mode != "現在の期間":
             week_end = pd.to_datetime(selected_data['yearEnd']).astimezone(JST)
             period_days = (week_end - week_start).days
             
+            # Note: Some metrics are set to 0 for yearly view as detailed review data
+            # is not stored in yearly aggregations to keep file size manageable
             stats = {
                 'total_prs': selected_data['totalPRs'],
                 'open_prs': selected_data['openPRs'],
                 'merged_prs': selected_data['mergedPRs'],
                 'closed_prs': selected_data['closedPRs'],
-                'total_change': 0,
-                'total_change_pct': 0,
+                'total_change': 0,  # Comparison not available for yearly view
+                'total_change_pct': 0,  # Comparison not available for yearly view
                 'avg_lead_time': selected_data['avgLeadTime'],
-                'lead_time_change': 0,
+                'lead_time_change': 0,  # Comparison not available for yearly view
                 'active_authors': selected_data['activeAuthors'],
-                'total_reviews': 0,
-                'total_comments': 0,
-                'avg_reviews_per_pr': 0,
-                'avg_comments_per_pr': 0
+                'total_reviews': 0,  # Review details not stored in yearly aggregations
+                'total_comments': 0,  # Comment details not stored in yearly aggregations
+                'avg_reviews_per_pr': 0,  # Review details not stored in yearly aggregations
+                'avg_comments_per_pr': 0  # Comment details not stored in yearly aggregations
             }
         
         # Empty dataframes for historical mode
