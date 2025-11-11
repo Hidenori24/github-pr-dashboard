@@ -386,6 +386,304 @@ def generate_fourkeys_json(output_dir: Path, prs: list):
     return fourkeys_data
 
 
+def calculate_weekly_statistics(prs: list, week_start: datetime, week_end: datetime) -> dict:
+    """Calculate statistics for a specific week"""
+    from datetime import timedelta
+    
+    # Filter PRs created in this week
+    week_prs = [
+        pr for pr in prs
+        if pr.get('createdAt') and
+        week_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) < week_end
+    ]
+    
+    # Previous week for comparison
+    prev_week_start = week_start - timedelta(days=7)
+    prev_week_prs = [
+        pr for pr in prs
+        if pr.get('createdAt') and
+        prev_week_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) < week_start
+    ]
+    
+    # Basic counts
+    total_prs = len(week_prs)
+    open_prs = len([pr for pr in week_prs if pr.get('state') == 'OPEN'])
+    merged_prs = len([pr for pr in week_prs if pr.get('state') == 'MERGED'])
+    closed_prs = len([pr for pr in week_prs if pr.get('state') == 'CLOSED'])
+    
+    # Previous period comparison
+    prev_total = len(prev_week_prs)
+    total_change = total_prs - prev_total
+    total_change_pct = (total_change / prev_total * 100) if prev_total > 0 else 0
+    
+    # Lead time calculation
+    merged_current = [pr for pr in week_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+    if merged_current:
+        lead_times = []
+        for pr in merged_current:
+            created = datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))
+            merged = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
+            lead_time_days = (merged - created).total_seconds() / (3600 * 24)
+            lead_times.append(lead_time_days)
+        
+        lead_times.sort()
+        median_lead_time = lead_times[len(lead_times) // 2] if lead_times else 0
+    else:
+        median_lead_time = 0
+    
+    # Previous lead time
+    merged_prev = [pr for pr in prev_week_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+    if merged_prev:
+        prev_lead_times = []
+        for pr in merged_prev:
+            created = datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))
+            merged = datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00'))
+            lead_time_days = (merged - created).total_seconds() / (3600 * 24)
+            prev_lead_times.append(lead_time_days)
+        
+        prev_lead_times.sort()
+        prev_lead_time = prev_lead_times[len(prev_lead_times) // 2] if prev_lead_times else 0
+        lead_time_change = median_lead_time - prev_lead_time
+    else:
+        lead_time_change = 0
+    
+    # Active authors
+    active_authors = len(set(pr.get('author') for pr in week_prs if pr.get('author')))
+    
+    # Review statistics
+    total_reviews = sum(pr.get('reviews_count', 0) for pr in week_prs)
+    total_comments = sum(pr.get('comments_count', 0) for pr in week_prs)
+    avg_reviews_per_pr = total_reviews / total_prs if total_prs > 0 else 0
+    avg_comments_per_pr = total_comments / total_prs if total_prs > 0 else 0
+    
+    return {
+        'weekStart': week_start.isoformat(),
+        'weekEnd': week_end.isoformat(),
+        'totalPRs': total_prs,
+        'openPRs': open_prs,
+        'mergedPRs': merged_prs,
+        'closedPRs': closed_prs,
+        'totalChange': total_change,
+        'totalChangePct': round(total_change_pct, 1),
+        'avgLeadTime': round(median_lead_time, 2),
+        'leadTimeChange': round(lead_time_change, 2),
+        'activeAuthors': active_authors,
+        'totalReviews': total_reviews,
+        'totalComments': total_comments,
+        'avgReviewsPerPR': round(avg_reviews_per_pr, 2),
+        'avgCommentsPerPR': round(avg_comments_per_pr, 2)
+    }
+
+
+def generate_historical_statistics_json(output_dir: Path, prs: list):
+    """Generate historical statistics for past weeks, months, and years"""
+    from datetime import timedelta
+    
+    now = datetime.now(timezone.utc)
+    historical_data = {
+        "generated": now.isoformat(),
+        "weekly": [],
+        "monthly": [],
+        "yearly": []
+    }
+    
+    # Generate weekly statistics for past 52 weeks (1 year)
+    print("  Calculating weekly statistics...")
+    for i in range(52, 0, -1):
+        week_start = now - timedelta(days=now.weekday() + 7*i)
+        week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+        week_end = week_start + timedelta(days=7)
+        
+        stats = calculate_weekly_statistics(prs, week_start, week_end)
+        historical_data["weekly"].append(stats)
+    
+    # Current week
+    week_start = now - timedelta(days=now.weekday())
+    week_start = week_start.replace(hour=0, minute=0, second=0, microsecond=0)
+    stats = calculate_weekly_statistics(prs, week_start, now)
+    historical_data["weekly"].append(stats)
+    
+    print(f"    Generated {len(historical_data['weekly'])} weekly statistics")
+    
+    # Generate monthly statistics for past 24 months (2 years)
+    print("  Calculating monthly statistics...")
+    for i in range(24, 0, -1):
+        # Calculate month start
+        year = now.year
+        month = now.month - i
+        while month <= 0:
+            month += 12
+            year -= 1
+        
+        month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+        
+        # Calculate month end (first day of next month)
+        if month == 12:
+            month_end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        else:
+            month_end = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+        
+        # Calculate stats for the month
+        month_prs = [
+            pr for pr in prs
+            if pr.get('createdAt') and
+            month_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) < month_end
+        ]
+        
+        # Previous month for comparison
+        if month == 1:
+            prev_month_start = datetime(year - 1, 12, 1, tzinfo=timezone.utc)
+            prev_month_end = datetime(year, 1, 1, tzinfo=timezone.utc)
+        else:
+            prev_month_start = datetime(year, month - 1, 1, tzinfo=timezone.utc)
+            prev_month_end = month_start
+        
+        prev_month_prs = [
+            pr for pr in prs
+            if pr.get('createdAt') and
+            prev_month_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) < prev_month_end
+        ]
+        
+        # Calculate statistics
+        total_prs = len(month_prs)
+        merged_prs = [pr for pr in month_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+        
+        if merged_prs:
+            lead_times = [
+                (datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00')) -
+                 datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))).total_seconds() / (3600 * 24)
+                for pr in merged_prs
+            ]
+            lead_times.sort()
+            median_lead_time = lead_times[len(lead_times) // 2] if lead_times else 0
+        else:
+            median_lead_time = 0
+        
+        historical_data["monthly"].append({
+            'monthStart': month_start.isoformat(),
+            'monthEnd': month_end.isoformat(),
+            'totalPRs': total_prs,
+            'openPRs': len([pr for pr in month_prs if pr.get('state') == 'OPEN']),
+            'mergedPRs': len(merged_prs),
+            'closedPRs': len([pr for pr in month_prs if pr.get('state') == 'CLOSED']),
+            'totalChange': total_prs - len(prev_month_prs),
+            'avgLeadTime': round(median_lead_time, 2),
+            'activeAuthors': len(set(pr.get('author') for pr in month_prs if pr.get('author')))
+        })
+    
+    # Current month
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    month_prs = [
+        pr for pr in prs
+        if pr.get('createdAt') and
+        month_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) <= now
+    ]
+    
+    merged_prs = [pr for pr in month_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+    if merged_prs:
+        lead_times = [
+            (datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00')) -
+             datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))).total_seconds() / (3600 * 24)
+            for pr in merged_prs
+        ]
+        lead_times.sort()
+        median_lead_time = lead_times[len(lead_times) // 2] if lead_times else 0
+    else:
+        median_lead_time = 0
+    
+    historical_data["monthly"].append({
+        'monthStart': month_start.isoformat(),
+        'monthEnd': now.isoformat(),
+        'totalPRs': len(month_prs),
+        'openPRs': len([pr for pr in month_prs if pr.get('state') == 'OPEN']),
+        'mergedPRs': len(merged_prs),
+        'closedPRs': len([pr for pr in month_prs if pr.get('state') == 'CLOSED']),
+        'totalChange': 0,
+        'avgLeadTime': round(median_lead_time, 2),
+        'activeAuthors': len(set(pr.get('author') for pr in month_prs if pr.get('author')))
+    })
+    
+    print(f"    Generated {len(historical_data['monthly'])} monthly statistics")
+    
+    # Generate yearly statistics for past 3 years
+    print("  Calculating yearly statistics...")
+    for i in range(3, 0, -1):
+        year_start = datetime(now.year - i, 1, 1, tzinfo=timezone.utc)
+        year_end = datetime(now.year - i + 1, 1, 1, tzinfo=timezone.utc)
+        
+        year_prs = [
+            pr for pr in prs
+            if pr.get('createdAt') and
+            year_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) < year_end
+        ]
+        
+        merged_prs = [pr for pr in year_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+        
+        if merged_prs:
+            lead_times = [
+                (datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00')) -
+                 datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))).total_seconds() / (3600 * 24)
+                for pr in merged_prs
+            ]
+            lead_times.sort()
+            median_lead_time = lead_times[len(lead_times) // 2] if lead_times else 0
+        else:
+            median_lead_time = 0
+        
+        historical_data["yearly"].append({
+            'yearStart': year_start.isoformat(),
+            'yearEnd': year_end.isoformat(),
+            'year': now.year - i,
+            'totalPRs': len(year_prs),
+            'openPRs': len([pr for pr in year_prs if pr.get('state') == 'OPEN']),
+            'mergedPRs': len(merged_prs),
+            'closedPRs': len([pr for pr in year_prs if pr.get('state') == 'CLOSED']),
+            'avgLeadTime': round(median_lead_time, 2),
+            'activeAuthors': len(set(pr.get('author') for pr in year_prs if pr.get('author')))
+        })
+    
+    # Current year (year to date)
+    year_start = datetime(now.year, 1, 1, tzinfo=timezone.utc)
+    year_prs = [
+        pr for pr in prs
+        if pr.get('createdAt') and
+        year_start <= datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00')) <= now
+    ]
+    
+    merged_prs = [pr for pr in year_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
+    if merged_prs:
+        lead_times = [
+            (datetime.fromisoformat(pr['mergedAt'].replace('Z', '+00:00')) -
+             datetime.fromisoformat(pr['createdAt'].replace('Z', '+00:00'))).total_seconds() / (3600 * 24)
+            for pr in merged_prs
+        ]
+        lead_times.sort()
+        median_lead_time = lead_times[len(lead_times) // 2] if lead_times else 0
+    else:
+        median_lead_time = 0
+    
+    historical_data["yearly"].append({
+        'yearStart': year_start.isoformat(),
+        'yearEnd': now.isoformat(),
+        'year': now.year,
+        'totalPRs': len(year_prs),
+        'openPRs': len([pr for pr in year_prs if pr.get('state') == 'OPEN']),
+        'mergedPRs': len(merged_prs),
+        'closedPRs': len([pr for pr in year_prs if pr.get('state') == 'CLOSED']),
+        'avgLeadTime': round(median_lead_time, 2),
+        'activeAuthors': len(set(pr.get('author') for pr in year_prs if pr.get('author')))
+    })
+    
+    print(f"    Generated {len(historical_data['yearly'])} yearly statistics")
+    
+    output_file = output_dir / "historical_statistics.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(historical_data, f, indent=2, ensure_ascii=False)
+    
+    print(f"✓ Generated: {output_file}")
+    return historical_data
+
+
 def main():
     """Main function to generate all data files"""
     print("GitHub PR Dashboard - Data Generator")
@@ -435,6 +733,11 @@ def main():
     issues = generate_issues_json(output_dir, repositories)
     print()
     
+    # Generate historical statistics
+    print("Generating historical_statistics.json...")
+    historical_stats = generate_historical_statistics_json(output_dir, prs)
+    print()
+    
     # Summary
     print("=" * 60)
     print("Summary:")
@@ -444,6 +747,9 @@ def main():
     print(f"  Open PRs: {analytics['summary']['open']}")
     print(f"  Merged PRs: {analytics['summary']['merged']}")
     print(f"  Closed PRs: {analytics['summary']['closed']}")
+    print(f"  Historical weeks: {len(historical_stats['weekly'])}")
+    print(f"  Historical months: {len(historical_stats['monthly'])}")
+    print(f"  Historical years: {len(historical_stats['yearly'])}")
     print()
     print("✓ All data files generated successfully!")
     print()
