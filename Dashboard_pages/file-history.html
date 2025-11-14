@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ファイル履歴 - GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-item" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
+                    </a>
+                    <a href="dashboard.html" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
+                    </a>
+                    <a href="analytics.html" class="nav-item" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
+                    </a>
+                    <a href="fourkeys.html" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
+                    </a>
+                    <a href="statistics.html" class="nav-item" data-page="statistics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
+                    </a>
+                    <a href="file-history.html" class="nav-item active" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
+                    <a href="issues.html" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button - Hidden by default -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+
+            <!-- Global Repository Selection Info - Always Visible -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+
+            <!-- File History Page -->
+            <div id="page-file-history" class="page active">
+                <h1 style="margin-bottom: 1rem;">📁 ファイル別PR履歴</h1>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                    ファイルやディレクトリを選択して、関連するPRの更新履歴・会話履歴を確認できます
+                </p>
+
+                <!-- Search Box -->
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="file-search-input" placeholder="🔍 ファイルを検索..."
+                           onkeyup="filterFileTree()"
+                           style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; background: var(--card-bg); color: var(--text-color);">
+                </div>
+
+                <!-- Split Layout: Tree on left, Details on right -->
+                <div class="file-history-layout">
+                    <!-- Left Panel: File Tree -->
+                    <div class="file-tree-panel">
+                        <div class="file-tree-header">
+                            <h3 style="margin: 0; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">エクスプローラー</h3>
+                        </div>
+                        <div id="file-tree-container" class="file-tree-content">
+                            <div class="loading">Loading file tree...</div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: PR Details -->
+                    <div class="file-details-panel">
+
+                    <div id="file-pr-list-container" style="display: none;">
+                        <h2 id="file-selected-path"></h2>
+
+                        <!-- PR統計カード -->
+                        <div class="metrics-grid" style="margin-bottom: 2rem;">
+                            <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <div class="metric-icon">📝</div>
+                                <div class="metric-value" id="file-total-prs">0</div>
+                                <div class="metric-label">総PR数</div>
+                            </div>
+
+                            <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                                <div class="metric-icon">🟢</div>
+                                <div class="metric-value" id="file-open-prs">0</div>
+                                <div class="metric-label">オープン中</div>
+                            </div>
+
+                            <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                                <div class="metric-icon">✅</div>
+                                <div class="metric-value" id="file-merged-prs">0</div>
+                                <div class="metric-label">マージ済み</div>
+                            </div>
+
+                            <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                                <div class="metric-icon">📅</div>
+                                <div class="metric-value" id="file-last-update">-</div>
+                                <div class="metric-label">最終更新</div>
+                            </div>
+                        </div>
+
+                        <!-- PRタイムライン -->
+                        <div id="file-pr-timeline-chart" style="height: 400px; margin-bottom: 2rem;"></div>
+
+                        <!-- PR一覧テーブル -->
+                        <div id="file-pr-table-container"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/file-history.js?v=20251113-18"></script>
+</body>
+</html>

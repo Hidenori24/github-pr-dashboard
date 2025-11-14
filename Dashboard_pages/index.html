@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GitHub PR Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
     <script src="js/i18n.js"></script>
@@ -24,8 +24,14 @@
             </div>
             
             <div class="sidebar-content">
-                <div class="primary-repo" id="primaryRepoInfo">
-                    <div class="loading">Loading...</div>
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
                 </div>
                 
                 <nav class="sidebar-nav">
@@ -49,6 +55,10 @@
                         <span class="nav-icon">📊</span>
                         <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
                     </a>
+                    <a href="#file-history" class="nav-item" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
                     <a href="#issues" class="nav-item" data-page="issues">
                         <span class="nav-icon">🎯</span>
                         <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
@@ -59,6 +69,21 @@
 
         <!-- Main Content -->
         <main class="main-content">
+            <!-- Back Button - Hidden by default -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+            
+            <!-- Global Repository Selection Info - Always Visible -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+            
             <!-- Home Page -->
             <div id="page-home" class="page active">
                 <h1 data-i18n="home.title">GitHub PR Dashboard & Analytics</h1>
@@ -83,14 +108,6 @@
                         </ul>
                     </div>
                 </div>
-
-                <h2 data-i18n="home.repos.title">設定済みリポジトリ</h2>
-                <p class="info-text" data-i18n="home.repos.select">プライマリーリポジトリを選択してください</p>
-                <div id="repoList" class="repo-grid">
-                    <div class="loading" data-i18n="home.repos.loading">Loading repositories...</div>
-                </div>
-
-                <div id="selectedRepoInfo" class="selected-repo-info"></div>
 
                 <hr class="divider">
 
@@ -246,13 +263,6 @@
                 
                 <div class="dashboard-controls">
                     <div class="control-group">
-                        <label for="repoFilter">リポジトリ:</label>
-                        <select id="repoFilter" class="form-select">
-                            <option value="">Loading...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="control-group">
                         <label for="stateFilter">状態:</label>
                         <select id="stateFilter" class="form-select" multiple>
                             <option value="OPEN" selected>Open</option>
@@ -280,8 +290,43 @@
                     <!-- Metrics will be inserted here -->
                 </div>
 
+                <!-- Risky PRs Section -->
+                <div class="chart-container" style="margin-bottom: 2rem;">
+                    <h2 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">🚨</span>
+                        注意が必要なPR
+                    </h2>
+                    <div id="riskyPRsContainer">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- Action Tracker Section -->
+                <div class="chart-container" style="margin-bottom: 2rem;">
+                    <h2 style="margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="font-size: 1.5rem;">✋</span>
+                        アクション必要なPR
+                    </h2>
+                    <div id="actionTrackerContainer">
+                        <div class="loading">Loading...</div>
+                    </div>
+                </div>
+
                 <div class="chart-container">
-                    <h2>PRタイムライン</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2 style="margin: 0;">PRタイムライン</h2>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="timelineLimit" style="font-size: 0.9rem; color: var(--text-muted);">表示件数:</label>
+                            <select id="timelineLimit" class="sidebar-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="handleTimelineLimitChange()">
+                                <option value="10">10件</option>
+                                <option value="20">20件</option>
+                                <option value="30" selected>30件</option>
+                                <option value="50">50件</option>
+                                <option value="100">100件</option>
+                                <option value="all">すべて</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="timelineChart" class="chart-area">
                         <div class="loading">Loading chart...</div>
                     </div>
@@ -312,7 +357,8 @@
                 <div class="tab-content">
                     <div id="tab-residence" class="tab-pane active">
                         <h2>滞留分析</h2>
-                        <p>Open PRの滞留時間分布</p>
+                        <p>Open PRの滞留時間分布 - PRがどのくらいOpenのまま残っているかを分析</p>
+                        <div id="residenceSummary" class="summary-container"></div>
                         <div id="residenceChart" class="chart-area">
                             <div class="loading">Loading chart...</div>
                         </div>
@@ -320,18 +366,21 @@
 
                     <div id="tab-blocker" class="tab-pane">
                         <h2>ブロッカー分析</h2>
-                        <p>未クローズ原因の推定</p>
+                        <p>未クローズ原因の推定 - 各PRがなぜ未完了なのかを分析</p>
                         <div id="blockerChart" class="chart-area">
                             <div class="loading">Loading chart...</div>
                         </div>
+                        <div id="blockerTable"></div>
                     </div>
 
                     <div id="tab-reviewer" class="tab-pane">
                         <h2>レビュワー分析</h2>
-                        <p>レビューアクティビティとコメント応答状況</p>
+                        <p>レビューアクティビティとコメント応答状況 - 誰がどれだけレビューしているかを分析</p>
+                        <div id="reviewerSummary" class="summary-container"></div>
                         <div id="reviewerChart" class="chart-area">
                             <div class="loading">Loading chart...</div>
                         </div>
+                        <div id="reviewerDetails"></div>
                     </div>
 
                     <div id="tab-trend" class="tab-pane">
@@ -373,87 +422,194 @@
                 <div class="page-header">
                     <h1 data-i18n="fourkeys.title">🔑 Four Keys メトリクス</h1>
                     <p class="page-subtitle" data-i18n="fourkeys.subtitle">
-                        DevOps Research and Assessment (DORA) の 4つの主要指標でソフトウェア開発のパフォーマンスを測定
+                        DevOps Research and Assessment (DORA) の 4つの主要指標でソフトウェア開発のパフォーマンスを測定<br>
+                        <small style="color: var(--text-muted); font-size: 0.9rem;">💡 サイドバーのリポジトリフィルタで特定のリポジトリに絞り込めます</small>
                     </p>
                 </div>
                 
                 <div class="dev-banner" id="fourkeys-dev-banner">
                     <div class="dev-banner-content">
-                        <span class="dev-banner-icon">🚧</span>
+                        <span class="dev-banner-icon">⚠️</span>
                         <div>
-                            <h3>データの生成が必要です</h3>
-                            <p>Four Keys メトリクスを表示するには、データ生成スクリプトを実行してください。</p>
-                            <code>python Dashboard_pages/generate_data.py</code>
+                            <h3>データが読み込めませんでした</h3>
+                            <p>Four Keys メトリクスのデータファイル (fourkeys.json) が見つからないか、読み込みに失敗しました。</p>
+                            <p>データは GitHub Actions により自動生成されます。しばらくお待ちください。</p>
                         </div>
                     </div>
                 </div>
 
                 <div id="fourkeys-content">
-                    <!-- Metrics Cards Grid -->
-                    <div class="metrics-grid">
-                        <div class="metric-card modern-card" id="deployment-frequency">
-                            <div class="metric-card-header">
-                                <span class="metric-icon">📦</span>
-                                <h3>Deployment Frequency</h3>
-                            </div>
-                            <div class="metric-card-body">
-                                <div class="metric-value-container">
-                                    <p class="metric-value loading">-</p>
-                                    <p class="metric-unit"></p>
+                    <!-- 1. サマリーセクション -->
+                    <div class="chart-section">
+                        <h2>📊 メトリクスサマリー</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">現在のパフォーマンスレベルを一目で確認</p>
+                        <div class="metrics-grid">
+                            <div class="metric-card modern-card" id="deployment-frequency">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">📦</span>
+                                    <h3>Deployment Frequency</h3>
                                 </div>
-                                <p class="metric-description">デプロイ頻度</p>
-                                <div class="metric-badge"></div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p class="metric-value loading">-</p>
+                                        <p class="metric-unit"></p>
+                                    </div>
+                                    <p class="metric-description">デプロイ頻度</p>
+                                    <div class="metric-badge"></div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="metric-card modern-card" id="lead-time">
-                            <div class="metric-card-header">
-                                <span class="metric-icon">⏱️</span>
-                                <h3>Lead Time for Changes</h3>
-                            </div>
-                            <div class="metric-card-body">
-                                <div class="metric-value-container">
-                                    <p class="metric-value loading">-</p>
-                                    <p class="metric-unit"></p>
+                            <div class="metric-card modern-card" id="lead-time">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">⏱️</span>
+                                    <h3>Lead Time for Changes</h3>
                                 </div>
-                                <p class="metric-description">変更のリードタイム</p>
-                                <div class="metric-badge"></div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p class="metric-value loading">-</p>
+                                        <p class="metric-unit"></p>
+                                    </div>
+                                    <p class="metric-description">変更のリードタイム</p>
+                                    <div class="metric-badge"></div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="metric-card modern-card" id="change-failure-rate">
-                            <div class="metric-card-header">
-                                <span class="metric-icon">❌</span>
-                                <h3>Change Failure Rate</h3>
-                            </div>
-                            <div class="metric-card-body">
-                                <div class="metric-value-container">
-                                    <p class="metric-value loading">-</p>
-                                    <p class="metric-unit"></p>
+                            <div class="metric-card modern-card" id="change-failure-rate">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">❌</span>
+                                    <h3>Change Failure Rate</h3>
                                 </div>
-                                <p class="metric-description">変更失敗率</p>
-                                <div class="metric-badge"></div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p class="metric-value loading">-</p>
+                                        <p class="metric-unit"></p>
+                                    </div>
+                                    <p class="metric-description">変更失敗率</p>
+                                    <div class="metric-badge"></div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="metric-card modern-card" id="mttr">
-                            <div class="metric-card-header">
-                                <span class="metric-icon">🔧</span>
-                                <h3>Time to Restore Service</h3>
-                            </div>
-                            <div class="metric-card-body">
-                                <div class="metric-value-container">
-                                    <p class="metric-value loading">-</p>
-                                    <p class="metric-unit"></p>
+                            <div class="metric-card modern-card" id="mttr">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">🔧</span>
+                                    <h3>Time to Restore Service</h3>
                                 </div>
-                                <p class="metric-description">サービス復旧時間 (MTTR)</p>
-                                <div class="metric-badge"></div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p class="metric-value loading">-</p>
+                                        <p class="metric-unit"></p>
+                                    </div>
+                                    <p class="metric-description">サービス復旧時間 (MTTR)</p>
+                                    <div class="metric-badge"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Charts will be inserted here by JavaScript -->
-                    <div id="fourkeys-charts" class="fourkeys-charts-container"></div>
+                    <!-- 2. 総合ビューセクション -->
+                    <div class="chart-section">
+                        <h2>🎯 総合パフォーマンスビュー</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">4つのメトリクスのバランスをレーダーチャートで可視化</p>
+                        <div id="fourkeys-radar-chart" class="chart-container" style="height: 500px;"></div>
+                    </div>
+
+                    <!-- 3. トレンド分析セクション -->
+                    <div class="chart-section">
+                        <h2>📈 トレンド分析</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">各メトリクスの時系列推移を確認</p>
+                        <div class="fourkeys-quadrant-grid">
+                            <div class="quadrant-item">
+                                <h3>Deployment Frequency</h3>
+                                <div id="fourkeys-quad-df" class="chart-container" style="height: 300px;"></div>
+                                <div class="quadrant-metric" id="quad-df-metric"></div>
+                            </div>
+                            <div class="quadrant-item">
+                                <h3>Lead Time for Changes</h3>
+                                <div id="fourkeys-quad-lt" class="chart-container" style="height: 300px;"></div>
+                                <div class="quadrant-metric" id="quad-lt-metric"></div>
+                            </div>
+                            <div class="quadrant-item">
+                                <h3>Change Failure Rate</h3>
+                                <div id="fourkeys-quad-cfr" class="chart-container" style="height: 300px;"></div>
+                                <div class="quadrant-metric" id="quad-cfr-metric"></div>
+                            </div>
+                            <div class="quadrant-item">
+                                <h3>Mean Time to Restore</h3>
+                                <div id="fourkeys-quad-mttr" class="chart-container" style="height: 300px;"></div>
+                                <div class="quadrant-metric" id="quad-mttr-metric"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. 詳細分析セクション -->
+                    <div class="chart-section">
+                        <h2>🔍 詳細分析</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">各メトリクスの詳細データと分布を確認</p>
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="df-detail">Deployment Frequency</button>
+                            <button class="tab-btn" data-tab="lt-detail">Lead Time</button>
+                            <button class="tab-btn" data-tab="cfr-detail">Change Failure Rate</button>
+                            <button class="tab-btn" data-tab="mttr-detail">MTTR</button>
+                        </div>
+                        <div class="tab-content">
+                            <div id="tab-df-detail" class="tab-pane active">
+                                <div id="fourkeys-df-detail" class="chart-container" style="height: 400px;"></div>
+                                <div id="fourkeys-df-table"></div>
+                            </div>
+                            <div id="tab-lt-detail" class="tab-pane">
+                                <div id="fourkeys-lt-detail" class="chart-container" style="height: 400px;"></div>
+                                <div id="fourkeys-lt-table"></div>
+                            </div>
+                            <div id="tab-cfr-detail" class="tab-pane">
+                                <div id="fourkeys-cfr-detail" class="chart-container" style="height: 400px;"></div>
+                                <div id="fourkeys-cfr-table"></div>
+                            </div>
+                            <div id="tab-mttr-detail" class="tab-pane">
+                                <div id="fourkeys-mttr-detail" class="chart-container" style="height: 400px;"></div>
+                                <div id="fourkeys-mttr-table"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5. 改善アクションセクション -->
+                    <div class="chart-section">
+                        <h2>💡 改善アクション</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">各メトリクスを向上させるための具体的な施策</p>
+                        <div class="improvement-hints">
+                            <div class="hint-card">
+                                <h4>Deployment Frequency を上げるには:</h4>
+                                <ul>
+                                    <li>PR サイズを小さくする</li>
+                                    <li>CI/CD パイプラインを高速化</li>
+                                    <li>フィーチャーフラグを活用</li>
+                                </ul>
+                            </div>
+                            <div class="hint-card">
+                                <h4>Lead Time を短縮するには:</h4>
+                                <ul>
+                                    <li>PRレビューを迅速化</li>
+                                    <li>自動テストを充実</li>
+                                    <li>PR作成前のコミュニケーション強化</li>
+                                </ul>
+                            </div>
+                            <div class="hint-card">
+                                <h4>Change Failure Rate を下げるには:</h4>
+                                <ul>
+                                    <li>テストカバレッジ向上</li>
+                                    <li>Canary デプロイメント導入</li>
+                                    <li>プレプロダクション環境の活用</li>
+                                </ul>
+                            </div>
+                            <div class="hint-card">
+                                <h4>MTTR を短縮するには:</h4>
+                                <ul>
+                                    <li>モニタリング・アラート強化</li>
+                                    <li>ロールバック手順の自動化</li>
+                                    <li>インシデント対応訓練</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -583,6 +739,25 @@
                             <div id="trendLeadTimeChart" class="chart-placeholder"></div>
                         </div>
                     </div>
+                    
+                    <!-- New Review Activity Trends -->
+                    <h3 style="margin-top: 2rem;">🔍 レビュー活動のトレンド</h3>
+                    <div class="chart-row">
+                        <div class="chart-container half-width">
+                            <h4>平均レビュー時間の推移</h4>
+                            <div id="trendReviewTimeChart" class="chart-placeholder"></div>
+                        </div>
+                        <div class="chart-container half-width">
+                            <h4>レビューの深さの推移</h4>
+                            <div id="trendReviewDepthChart" class="chart-placeholder"></div>
+                        </div>
+                    </div>
+                    <div class="chart-row">
+                        <div class="chart-container half-width">
+                            <h4>平均PRサイズの推移</h4>
+                            <div id="trendPRSizeChart" class="chart-placeholder"></div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Insights Section -->
@@ -664,15 +839,101 @@
                     </div>
                 </div>
             </div>
+
+            <!-- PR Detail Page -->
+            <div id="page-pr-detail" class="page">
+                <div style="margin-bottom: 1rem;">
+                    <button onclick="navigateToPage('dashboard')" style="background: var(--secondary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
+                        ← ダッシュボードに戻る
+                    </button>
+                </div>
+
+                <div id="pr-detail-content">
+                    <div class="loading">Loading PR details...</div>
+                </div>
+            </div>
+
+            <!-- File History Page -->
+            <div id="page-file-history" class="page">
+                <h1 style="margin-bottom: 1rem;">📁 ファイル別PR履歴</h1>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+                    ファイルやディレクトリを選択して、関連するPRの更新履歴・会話履歴を確認できます
+                </p>
+
+                <!-- Search Box -->
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="file-search-input" placeholder="🔍 ファイルを検索..." 
+                           onkeyup="filterFileTree()"
+                           style="width: 100%; padding: 0.75rem 1rem; border: 2px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; background: var(--card-bg); color: var(--text-color);">
+                </div>
+
+                <!-- Split Layout: Tree on left, Details on right -->
+                <div class="file-history-layout">
+                    <!-- Left Panel: File Tree -->
+                    <div class="file-tree-panel">
+                        <div class="file-tree-header">
+                            <h3 style="margin: 0; font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">エクスプローラー</h3>
+                        </div>
+                        <div id="file-tree-container" class="file-tree-content">
+                            <div class="loading">Loading file tree...</div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel: PR Details -->
+                    <div class="file-details-panel">
+
+                    <div id="file-pr-list-container" style="display: none;">
+                        <h2 id="file-selected-path"></h2>
+                        
+                        <!-- PR統計カード -->
+                        <div class="metrics-grid" style="margin-bottom: 2rem;">
+                            <div class="metric-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <div class="metric-icon">📝</div>
+                                <div class="metric-value" id="file-total-prs">0</div>
+                                <div class="metric-label">総PR数</div>
+                            </div>
+                            
+                            <div class="metric-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); color: white;">
+                                <div class="metric-icon">🟢</div>
+                                <div class="metric-value" id="file-open-prs">0</div>
+                                <div class="metric-label">オープン中</div>
+                            </div>
+                            
+                            <div class="metric-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white;">
+                                <div class="metric-icon">✅</div>
+                                <div class="metric-value" id="file-merged-prs">0</div>
+                                <div class="metric-label">マージ済み</div>
+                            </div>
+                            
+                            <div class="metric-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%); color: white;">
+                                <div class="metric-icon">📅</div>
+                                <div class="metric-value" id="file-last-update">-</div>
+                                <div class="metric-label">最終更新</div>
+                            </div>
+                        </div>
+
+                        <!-- PRタイムライン -->
+                        <div id="file-pr-timeline-chart" style="height: 400px; margin-bottom: 2rem;"></div>
+
+                        <!-- PR一覧テーブル -->
+                        <div id="file-pr-table-container"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
-    <script src="js/config.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/analytics.js"></script>
-    <script src="js/fourkeys.js"></script>
-    <script src="js/statistics.js"></script>
-    <script src="js/issues.js"></script>
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/dashboard.js?v=20251113-18"></script>
+    <script src="js/analytics.js?v=20251113-18"></script>
+    <script src="js/fourkeys.js?v=20251113-18"></script>
+    <script src="js/statistics.js?v=20251113-18"></script>
+    <script src="js/issues.js?v=20251113-18"></script>
+    <script src="js/pr-detail.js?v=20251113-18"></script>
+    <script src="js/file-history.js?v=20251113-18"></script>
 </body>
 </html>

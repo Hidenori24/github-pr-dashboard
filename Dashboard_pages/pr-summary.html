@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR詳細 - GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-item" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
+                    </a>
+                    <a href="dashboard.html" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
+                    </a>
+                    <a href="analytics.html" class="nav-item" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
+                    </a>
+                    <a href="fourkeys.html" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
+                    </a>
+                    <a href="statistics.html" class="nav-item" data-page="statistics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
+                    </a>
+                    <a href="pr-summary.html" class="nav-item active" data-page="pr-summary">
+                        <span class="nav-icon">📄</span>
+                        <span class="nav-label">PR詳細</span>
+                    </a>
+                    <a href="file-history.html" class="nav-item" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
+                    <a href="issues.html" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+
+            <!-- Global Repository Selection Info -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+
+            <!-- PR Summary Page -->
+            <div id="page-pr-summary" class="page active">
+                <div class="page-header">
+                    <h1>📄 PR詳細サマリー</h1>
+                    <p class="page-subtitle">
+                        選択したPRの詳細情報とアクション担当者を確認できます
+                    </p>
+                </div>
+
+                <!-- PR Selection -->
+                <div class="pr-selection">
+                    <div class="control-group">
+                        <label for="prSelector">PRを選択:</label>
+                        <select id="prSelector" class="form-select" onchange="onPRSelected()">
+                            <option value="">PRを選択してください...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- PR Detail Container -->
+                <div id="prDetailContainer" class="pr-detail-container" style="display: none;">
+                    <!-- PR Header -->
+                    <div class="pr-header">
+                        <div class="pr-title-section">
+                            <h2 id="prTitle">PR Title</h2>
+                            <div class="pr-meta">
+                                <span id="prAuthor"></span> |
+                                <span id="prCreatedAt"></span>
+                            </div>
+                        </div>
+                        <div class="pr-actions">
+                            <button id="githubLink" class="btn btn-primary" onclick="openInGitHub()">🔗 GitHubで開く</button>
+                        </div>
+                    </div>
+
+                    <!-- Action Owner Info -->
+                    <div id="actionOwnerInfo" class="action-owner-info">
+                        <!-- Dynamically filled by JavaScript -->
+                    </div>
+
+                    <!-- Metrics Cards -->
+                    <div class="pr-metrics">
+                        <div class="metrics-grid">
+                            <div class="metric-card modern-card">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">💬</span>
+                                    <h3>コメント数</h3>
+                                </div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p id="commentsCount" class="metric-value">-</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card modern-card">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">👀</span>
+                                    <h3>レビュー数</h3>
+                                </div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p id="reviewsCount" class="metric-value">-</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card modern-card">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">⏱️</span>
+                                    <h3>経過日数</h3>
+                                </div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p id="ageDays" class="metric-value">-</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card modern-card">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">📝</span>
+                                    <h3>コード変更</h3>
+                                </div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p id="codeChanges" class="metric-value">-</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="metric-card modern-card">
+                                <div class="metric-card-header">
+                                    <span class="metric-icon">🏢</span>
+                                    <h3>営業日数</h3>
+                                </div>
+                                <div class="metric-card-body">
+                                    <div class="metric-value-container">
+                                        <p id="businessDays" class="metric-value">-</p>
+                                    </div>
+                                    <div class="metric-description">土日を除外した経過日数</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabs Section -->
+                    <div class="pr-tabs">
+                        <div class="tabs">
+                            <button class="tab active" onclick="switchTab('review')">レビュー状況</button>
+                            <button class="tab" onclick="switchTab('files')">変更ファイル</button>
+                            <button class="tab" onclick="switchTab('timeline')">タイムライン</button>
+                        </div>
+
+                        <div id="reviewTab" class="tab-panel active">
+                            <div class="tab-content">
+                                <h3>レビュー状況</h3>
+                                <div id="reviewStatus" class="review-status">
+                                    <!-- Review status content -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="filesTab" class="tab-panel">
+                            <div class="tab-content">
+                                <h3>変更ファイル</h3>
+                                <div id="filesList" class="files-list">
+                                    <!-- Files list content -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="timelineTab" class="tab-panel">
+                            <div class="tab-content">
+                                <h3>PRタイムライン</h3>
+                                <div id="timelineChart" class="timeline-chart">
+                                    <!-- Timeline chart content -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="loading-state" style="display: none;">
+                    <div class="loading">データを読み込み中...</div>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="empty-state">
+                    <h3>PRを選択してください</h3>
+                    <p>上記のドロップダウンから詳細を確認したいPRを選択してください。</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/pr-summary.js?v=20251113-18"></script>
+</body>
+</html>

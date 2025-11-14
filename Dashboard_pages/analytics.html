@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PR分析 - GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-item" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
+                    </a>
+                    <a href="dashboard.html" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
+                    </a>
+                    <a href="analytics.html" class="nav-item active" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
+                    </a>
+                    <a href="fourkeys.html" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
+                    </a>
+                    <a href="statistics.html" class="nav-item" data-page="statistics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
+                    </a>
+                    <a href="file-history.html" class="nav-item" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
+                    <a href="issues.html" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button - Hidden by default -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+
+            <!-- Global Repository Selection Info - Always Visible -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+
+            <!-- Analytics Page -->
+            <div id="page-analytics" class="page active">
+                <h1>PR分析</h1>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="residence">滞留分析</button>
+                    <button class="tab-btn" data-tab="blocker">ブロッカー分析</button>
+                    <button class="tab-btn" data-tab="reviewer">レビュワー分析</button>
+                    <button class="tab-btn" data-tab="trend">トレンド分析</button>
+                    <button class="tab-btn" data-tab="bottleneck">ボトルネック分析</button>
+                    <button class="tab-btn" data-tab="speed">レビュー速度</button>
+                    <button class="tab-btn" data-tab="pattern">変更パターン</button>
+                </div>
+
+                <div class="tab-content">
+                    <div id="tab-residence" class="tab-pane active">
+                        <h2>滞留分析</h2>
+                        <p>Open PRの滞留時間分布 - PRがどのくらいOpenのまま残っているかを分析</p>
+                        <div id="residenceSummary" class="summary-container"></div>
+                        <div id="residenceChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-blocker" class="tab-pane">
+                        <h2>ブロッカー分析</h2>
+                        <p>未クローズ原因の推定 - 各PRがなぜ未完了なのかを分析</p>
+                        <div id="blockerChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                        <div id="blockerTable"></div>
+                    </div>
+
+                    <div id="tab-reviewer" class="tab-pane">
+                        <h2>レビュワー分析</h2>
+                        <p>レビューアクティビティとコメント応答状況 - 誰がどれだけレビューしているかを分析</p>
+                        <div id="reviewerSummary" class="summary-container"></div>
+                        <div id="reviewerChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                        <div id="reviewerDetails"></div>
+                    </div>
+
+                    <div id="tab-trend" class="tab-pane">
+                        <h2>トレンド分析</h2>
+                        <p>週次PR作成数推移</p>
+                        <div id="trendChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-bottleneck" class="tab-pane">
+                        <h2>ボトルネック分析</h2>
+                        <p>レビュー待ち/修正待ちの詳細</p>
+                        <div id="bottleneckChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-speed" class="tab-pane">
+                        <h2>レビュー速度</h2>
+                        <p>マージまでの時間分析</p>
+                        <div id="speedChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+
+                    <div id="tab-pattern" class="tab-pane">
+                        <h2>変更パターン</h2>
+                        <p>ファイル変更頻度とPR規模</p>
+                        <div id="patternChart" class="chart-area">
+                            <div class="loading">Loading chart...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/analytics.js?v=20251113-18"></script>
+</body>
+</html>

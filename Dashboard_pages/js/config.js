@@ -28,8 +28,8 @@ const CONFIG = {
     // Chart configuration
     charts: {
         colors: {
-            OPEN: '#ff4b4b',
-            MERGED: '#21c354',
+            OPEN: '#1f77b4',      // 青（Streamlitスタイル）
+            MERGED: '#7fcdff',    // 水色（Streamlitスタイル）
             CLOSED: '#6b7280',
             draft: '#ffa421'
         },

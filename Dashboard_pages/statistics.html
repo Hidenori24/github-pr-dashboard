@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>統計・レポート - GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-item" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
+                    </a>
+                    <a href="dashboard.html" class="nav-item" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
+                    </a>
+                    <a href="analytics.html" class="nav-item" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
+                    </a>
+                    <a href="fourkeys.html" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
+                    </a>
+                    <a href="statistics.html" class="nav-item active" data-page="statistics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
+                    </a>
+                    <a href="file-history.html" class="nav-item" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
+                    <a href="issues.html" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button - Hidden by default -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+
+            <!-- Global Repository Selection Info - Always Visible -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+
+            <!-- Statistics Page -->
+            <div id="page-statistics" class="page active">
+                <div class="page-header">
+                    <h1 data-i18n="statistics.title">📊 統計情報・週間レポート</h1>
+                    <p class="page-subtitle" data-i18n="statistics.subtitle">
+                        開発プロセスの現状を理解し、改善の機会を見つけるための包括的な統計情報
+                    </p>
+                </div>
+
+                <!-- Controls -->
+                <div class="statistics-controls">
+                    <div class="control-group">
+                        <label for="viewModeSelect">表示モード:</label>
+                        <select id="viewModeSelect" class="form-select">
+                            <option value="current">現在の期間</option>
+                            <option value="historical-weekly">過去週単位</option>
+                            <option value="historical-monthly">過去月単位</option>
+                            <option value="historical-yearly">過去年単位</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="periodSelect" data-i18n="statistics.period">レポート期間:</label>
+                        <select id="periodSelect" class="form-select">
+                            <option value="thisWeek">今週</option>
+                            <option value="lastWeek">先週</option>
+                            <option value="thisMonth">今月</option>
+                            <option value="lastMonth">先月</option>
+                            <option value="last30days">過去30日</option>
+                            <option value="last90days">過去90日</option>
+                        </select>
+                    </div>
+                    <div id="historicalSelectContainer" class="control-group" style="display: none;">
+                        <label for="historicalSelect">選択:</label>
+                        <select id="historicalSelect" class="form-select">
+                        </select>
+                    </div>
+                    <button id="downloadReport" class="btn btn-primary" data-i18n="statistics.download">
+                        📄 週間レポートをダウンロード
+                    </button>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="statistics-summary">
+                    <h2 data-i18n="statistics.summary">📅 期間サマリー</h2>
+                    <div class="metrics-grid">
+                        <div class="metric-card modern-card" id="totalPRsCard">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">📋</span>
+                                <h3 data-i18n="statistics.total_prs">総PR数</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value">-</p>
+                                </div>
+                                <p class="metric-delta"></p>
+                            </div>
+                        </div>
+
+                        <div class="metric-card modern-card" id="mergedPRsCard">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">✅</span>
+                                <h3 data-i18n="statistics.merged">マージ済み</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value">-</p>
+                                </div>
+                                <p class="metric-delta"></p>
+                            </div>
+                        </div>
+
+                        <div class="metric-card modern-card" id="leadTimeCard">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">⏱️</span>
+                                <h3 data-i18n="statistics.lead_time">平均リードタイム</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value">-</p>
+                                </div>
+                                <p class="metric-delta"></p>
+                            </div>
+                        </div>
+
+                        <div class="metric-card modern-card" id="activeAuthorsCard">
+                            <div class="metric-card-header">
+                                <span class="metric-icon">👥</span>
+                                <h3 data-i18n="statistics.active_authors">アクティブ開発者</h3>
+                            </div>
+                            <div class="metric-card-body">
+                                <div class="metric-value-container">
+                                    <p class="metric-value">-</p>
+                                </div>
+                                <p class="metric-delta"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="statistics-charts">
+                    <div class="chart-row">
+                        <div class="chart-container half-width">
+                            <h3 data-i18n="statistics.state_breakdown">PR状態の内訳</h3>
+                            <div id="stateChart" class="chart-placeholder"></div>
+                        </div>
+                        <div class="chart-container half-width">
+                            <h3 data-i18n="statistics.review_activity">レビュー活動</h3>
+                            <div id="reviewMetrics" class="review-metrics"></div>
+                            <div id="reviewDecisionStats" class="review-decision-stats" style="margin-top: 1rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trends Section -->
+                <div class="statistics-trends">
+                    <h2 data-i18n="statistics.trends">📈 トレンド分析（過去8週間）</h2>
+                    <div class="chart-row">
+                        <div class="chart-container half-width">
+                            <h3 data-i18n="statistics.pr_count_trend">PR作成数の推移</h3>
+                            <div id="trendPRChart" class="chart-placeholder"></div>
+                        </div>
+                        <div class="chart-container half-width">
+                            <h3 data-i18n="statistics.lead_time_trend">平均リードタイムの推移</h3>
+                            <div id="trendLeadTimeChart" class="chart-placeholder"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Insights Section -->
+                <div class="statistics-insights">
+                    <h2 data-i18n="statistics.insights">💡 洞察</h2>
+                    <div id="insightsContainer" class="insights-container">
+                        <div class="loading" data-i18n="statistics.loading_insights">データを分析中...</div>
+                    </div>
+                </div>
+
+                <!-- Four Keys Metrics Section -->
+                <div class="statistics-fourkeys">
+                    <h2>🔑 Four Keys メトリクス</h2>
+                    <div id="fourKeysMetricsContainer" class="four-keys-container">
+                        <div class="loading">Four Keysデータを読み込み中...</div>
+                    </div>
+                </div>
+
+                <!-- Correlation Analysis Section -->
+                <div class="statistics-correlation">
+                    <h2>📊 指標相関分析</h2>
+                    <div id="correlationInsightsContainer" class="correlation-container">
+                        <div class="loading">相関分析を実行中...</div>
+                    </div>
+                </div>
+
+                <!-- Recommendations Section -->
+                <div class="statistics-recommendations">
+                    <h2 data-i18n="statistics.recommendations">🎯 改善提案</h2>
+                    <div id="recommendationsContainer" class="recommendations-container">
+                        <div class="loading" data-i18n="statistics.loading_recommendations">提案を生成中...</div>
+                    </div>
+                </div>
+
+                <!-- Detailed Statistics Section -->
+                <div class="statistics-detailed">
+                    <h2 data-i18n="statistics.detailed">📊 詳細統計</h2>
+                    <div class="detailed-stats-container">
+                        <div class="detailed-stats-section">
+                            <h3>👤 PR作成者別統計</h3>
+                            <div id="authorStatsContainer" class="stats-table-container">
+                                <div class="loading">データを読み込み中...</div>
+                            </div>
+                        </div>
+                        <div class="detailed-stats-section">
+                            <h3>👁️ レビュワー別統計</h3>
+                            <div id="reviewerStatsContainer" class="stats-table-container">
+                                <div class="loading">データを読み込み中...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/fourkeys.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/statistics.js?v=20251113-18"></script>
+</body>
+</html>

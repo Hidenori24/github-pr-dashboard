@@ -6,6 +6,15 @@ function loadIssuesData() {
     loadIssuesTab('overview');
 }
 
+// Get issues filtered by global repository selection
+function getFilteredIssues() {
+    const globalFilter = document.getElementById('globalRepoFilter');
+    const selectedRepo = globalFilter ? globalFilter.value : '';
+    if (!selectedRepo) return appData.issues || [];
+    const [owner, repo] = selectedRepo.split('/');
+    return (appData.issues || []).filter(i => i.owner === owner && i.repo === repo);
+}
+
 // Load data for a specific tab
 function loadIssuesTab(tabName) {
     console.log('Loading issues tab:', tabName);
@@ -35,14 +44,13 @@ function loadIssuesTab(tabName) {
 // Overview: Issue status and distribution
 function loadIssuesOverview() {
     const container = document.getElementById('issuesOverviewCharts');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available. Please run fetch_data.py with issue fetching enabled.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    const openIssues = appData.issues.filter(issue => issue.state === 'OPEN');
-    const closedIssues = appData.issues.filter(issue => issue.state === 'CLOSED');
+    const openIssues = issues.filter(issue => issue.state === 'OPEN');
+    const closedIssues = issues.filter(issue => issue.state === 'CLOSED');
     
     // Status distribution pie chart
     const statusData = {
@@ -57,7 +65,7 @@ function loadIssuesOverview() {
         <div class="metrics-grid">
             <div class="metric-card">
                 <h3>Total Issues</h3>
-                <div class="metric-value">${appData.issues.length}</div>
+                <div class="metric-value">${issues.length}</div>
             </div>
             <div class="metric-card">
                 <h3>Open Issues</h3>
@@ -69,7 +77,7 @@ function loadIssuesOverview() {
             </div>
             <div class="metric-card">
                 <h3>Close Rate</h3>
-                <div class="metric-value">${((closedIssues.length / appData.issues.length) * 100).toFixed(1)}%</div>
+                <div class="metric-value">${((closedIssues.length / issues.length) * 100).toFixed(1)}%</div>
             </div>
         </div>
         <div class="chart-row">
@@ -156,19 +164,17 @@ function loadIssuesOverview() {
 // Timeline: Gantt chart for issues
 function loadIssuesTimeline() {
     const container = document.getElementById('issuesTimelineChart');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    // Prepare data for Gantt chart
-    const issues = appData.issues
+    const issuesList = issues
         .filter(issue => issue.createdAt)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 50); // Show latest 50 issues
     
-    const traces = issues.map(issue => {
+    const traces = issuesList.map(issue => {
         const start = new Date(issue.createdAt);
         const end = issue.closedAt ? new Date(issue.closedAt) : new Date();
         
@@ -200,7 +206,7 @@ function loadIssuesTimeline() {
             title: 'Issue',
             automargin: true
         },
-        height: Math.max(600, issues.length * 25),
+        height: Math.max(600, issuesList.length * 25),
         barmode: 'overlay'
     };
     
@@ -216,14 +222,12 @@ function loadIssuesTimeline() {
 // Cycle Time: Time from issue creation to linked PR merge
 function loadCycleTimeAnalysis() {
     const container = document.getElementById('cycleTimeChart');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    // Filter issues with cycle time data
-    const issuesWithCycleTime = appData.issues.filter(issue => issue.cycle_time_hours !== null && issue.cycle_time_hours !== undefined);
+    const issuesWithCycleTime = issues.filter(issue => issue.cycle_time_hours !== null && issue.cycle_time_hours !== undefined);
     
     if (issuesWithCycleTime.length === 0) {
         container.innerHTML = '<div class="no-data">No issues with linked PRs found. Cycle time requires issues to be linked to merged PRs.</div>';
@@ -334,14 +338,13 @@ function loadCycleTimeAnalysis() {
 // Issue-PR Linking: Show which issues are linked to PRs
 function loadIssuePRLinking() {
     const container = document.getElementById('issuePRLinkChart');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    const issuesWithPRs = appData.issues.filter(issue => issue.linked_pr_count > 0);
-    const issuesWithoutPRs = appData.issues.filter(issue => issue.linked_pr_count === 0);
+    const issuesWithPRs = issues.filter(issue => issue.linked_pr_count > 0);
+    const issuesWithoutPRs = issues.filter(issue => issue.linked_pr_count === 0);
     
     container.innerHTML = `
         <div class="metrics-grid">
@@ -355,7 +358,7 @@ function loadIssuePRLinking() {
             </div>
             <div class="metric-card">
                 <h3>PR Linking Rate</h3>
-                <div class="metric-value">${((issuesWithPRs.length / appData.issues.length) * 100).toFixed(1)}%</div>
+                <div class="metric-value">${((issuesWithPRs.length / issues.length) * 100).toFixed(1)}%</div>
             </div>
             <div class="metric-card">
                 <h3>Avg PRs per Issue</h3>
@@ -383,7 +386,7 @@ function loadIssuePRLinking() {
                             <td>${issue.linked_pr_count}</td>
                             <td>
                                 ${issue.linked_prs.slice(0, 3).map(pr => 
-                                    `<a href="${pr.url}" target="_blank" title="${pr.title}">#${pr.number} (${pr.state})</a>`
+                                    `<a href="#" onclick="event.preventDefault(); navigateToPRDetail('${pr.owner}', '${pr.repo}', ${pr.number})" title="${pr.title}" style="cursor: pointer;">#${pr.number} (${pr.state})</a>`
                                 ).join(', ')}
                                 ${issue.linked_prs.length > 3 ? '...' : ''}
                             </td>
@@ -398,13 +401,12 @@ function loadIssuePRLinking() {
 // Milestone Tracking: Show milestone progress
 function loadMilestoneTracking() {
     const container = document.getElementById('milestoneChart');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    const issuesWithMilestone = appData.issues.filter(issue => issue.milestone);
+    const issuesWithMilestone = issues.filter(issue => issue.milestone);
     
     if (issuesWithMilestone.length === 0) {
         container.innerHTML = '<div class="no-data">No issues with milestones found.</div>';
@@ -464,13 +466,12 @@ function loadMilestoneTracking() {
 // Team Velocity: Issues closed per week
 function loadTeamVelocity() {
     const container = document.getElementById('velocityChart');
-    
-    if (!appData.issues || appData.issues.length === 0) {
-        container.innerHTML = '<div class="no-data">No issue data available.</div>';
+    const issues = getFilteredIssues();
+    if (!issues || issues.length === 0) {
+        container.innerHTML = '<div class="no-data">No issue data for selected repository.</div>';
         return;
     }
-    
-    const closedIssues = appData.issues.filter(issue => issue.closedAt);
+    const closedIssues = issues.filter(issue => issue.closedAt);
     
     if (closedIssues.length === 0) {
         container.innerHTML = '<div class="no-data">No closed issues found.</div>';

@@ -8,30 +8,39 @@ let appData = {
     primaryRepoIndex: 0
 };
 
+// Global loading state so pages can know data is still being fetched
+let isDataLoading = false;
+
+// Navigation history stack
+let navigationHistory = [];
+
 // Initialize the application
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('Initializing GitHub PR Dashboard...');
-    
+
     // Initialize theme
     initializeTheme();
-    
+
     // Initialize i18n
     if (typeof i18n !== 'undefined') {
         i18n.init();
     }
-    
+
     // Setup navigation
     setupNavigation();
-    
+
     // Setup tab switching
     setupTabs();
-    
-    // Load data
+
+    // Start loading data
     await loadAllData();
-    
-    // Initialize home page
+
+    // Initialize home page content (repository cards, etc.)
     initializeHomePage();
-    
+
+    // After data has finished loading, refresh the currently active page if it's not home
+    refreshActivePageData();
+
     console.log('Dashboard initialized successfully');
 });
 
@@ -83,8 +92,20 @@ function setupNavigation() {
 }
 
 // Navigate to a specific page
-function navigateToPage(pageName) {
-    console.log('Navigating to:', pageName);
+function navigateToPage(pageName, skipInit = false, addToHistory = true) {
+    console.log('Navigating to:', pageName, 'skipInit:', skipInit, 'addToHistory:', addToHistory);
+    
+    // Get current page before navigating
+    const currentPage = document.querySelector('.page.active')?.id.replace('page-', '');
+    console.log('Current page:', currentPage, 'Target page:', pageName);
+    
+    // Add current page to history if it exists and addToHistory is true
+    if (addToHistory && currentPage && currentPage !== pageName) {
+        navigationHistory.push(currentPage);
+        console.log('Added to history:', currentPage, 'Stack:', navigationHistory);
+    } else {
+        console.log('Not adding to history. Reason:', {addToHistory, currentPage, pageName, same: currentPage === pageName});
+    }
     
     // Update active nav item
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -112,10 +133,59 @@ function navigateToPage(pageName) {
             if (typeof initializeFourKeysPage === 'function') {
                 initializeFourKeysPage();
             }
-        } else if (pageName === 'issues') {
-            if (typeof loadIssuesData === 'function') {
-                loadIssuesData();
+        } else if (pageName === 'statistics') {
+            if (typeof initStatisticsPage === 'function') {
+                initStatisticsPage();
             }
+        } else if (pageName === 'file-history') {
+            if (typeof initializeFileHistoryPage === 'function') {
+                initializeFileHistoryPage();
+            }
+        } else if (pageName === 'pr-detail') {
+            // Skip initialization if skipInit is true
+            if (!skipInit && typeof initializePRDetailPage === 'function') {
+                initializePRDetailPage();
+            }
+        }
+    }
+    
+    // Update back button visibility
+    updateBackButton();
+}
+
+// Go back to previous page
+function goBack() {
+    console.log('🔙 goBack() called! History length:', navigationHistory.length, 'Stack:', navigationHistory);
+    
+    if (navigationHistory.length > 0) {
+        const previousPage = navigationHistory.pop();
+        console.log('🔙 Going back to:', previousPage, 'Remaining stack:', navigationHistory);
+        
+        // Clear PR detail session storage when going back
+        sessionStorage.removeItem('pr_detail_owner');
+        sessionStorage.removeItem('pr_detail_repo');
+        sessionStorage.removeItem('pr_detail_number');
+        
+        navigateToPage(previousPage, false, false); // Don't add to history when going back
+        
+        // Scroll to top
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    } else {
+        console.log('🔙 No history to go back to!');
+    }
+}
+
+// Update back button visibility
+function updateBackButton() {
+    const backButton = document.getElementById('back-button');
+    if (backButton) {
+        if (navigationHistory.length > 0) {
+            backButton.style.display = 'flex';
+        } else {
+            backButton.style.display = 'none';
         }
     }
 }
@@ -208,18 +278,135 @@ async function safeFetch(url, options = {}) {
     }
 }
 
-// Load all data from JSON files
+// IndexedDB Cache Utilities
+const CACHE_DB_NAME = 'GitHubDashboardCache';
+const CACHE_DB_VERSION = 1;
+const CACHE_EXPIRY_HOURS = 24; // Cache expires after 24 hours
+
+// Open IndexedDB database
+async function openCacheDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(CACHE_DB_NAME, CACHE_DB_VERSION);
+
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+
+        request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('cache')) {
+                const store = db.createObjectStore('cache', { keyPath: 'key' });
+                store.createIndex('timestamp', 'timestamp', { unique: false });
+            }
+        };
+    });
+}
+
+// Set data in cache with timestamp
+async function setCache(key, data) {
+    try {
+        const db = await openCacheDB();
+        const transaction = db.transaction(['cache'], 'readwrite');
+        const store = transaction.objectStore('cache');
+
+        const cacheEntry = {
+            key: key,
+            data: data,
+            timestamp: Date.now()
+        };
+
+        await new Promise((resolve, reject) => {
+            const request = store.put(cacheEntry);
+            request.onsuccess = () => resolve();
+            request.onerror = () => reject(request.error);
+        });
+
+        console.log(`[Cache] Saved ${key} to IndexedDB`);
+    } catch (error) {
+        console.warn(`[Cache] Failed to save ${key}:`, error);
+    }
+}
+
+// Get data from cache if valid
+async function getCache(key) {
+    try {
+        const db = await openCacheDB();
+        const transaction = db.transaction(['cache'], 'readonly');
+        const store = transaction.objectStore('cache');
+
+        const cacheEntry = await new Promise((resolve, reject) => {
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+
+        if (!cacheEntry) {
+            console.log(`[Cache] No cache found for ${key}`);
+            return null;
+        }
+
+        // Check if cache is expired
+        const ageHours = (Date.now() - cacheEntry.timestamp) / (1000 * 60 * 60);
+        if (ageHours > CACHE_EXPIRY_HOURS) {
+            console.log(`[Cache] Cache expired for ${key} (${ageHours.toFixed(1)} hours old)`);
+            // Remove expired cache
+            const deleteTransaction = db.transaction(['cache'], 'readwrite');
+            const deleteStore = deleteTransaction.objectStore('cache');
+            deleteStore.delete(key);
+            return null;
+        }
+
+        console.log(`[Cache] Loaded ${key} from IndexedDB (${ageHours.toFixed(1)} hours old)`);
+        return cacheEntry.data;
+    } catch (error) {
+        console.warn(`[Cache] Failed to load ${key}:`, error);
+        return null;
+    }
+}
+
+// Check if cache is valid (not expired)
+async function isCacheValid(key) {
+    try {
+        const db = await openCacheDB();
+        const transaction = db.transaction(['cache'], 'readonly');
+        const store = transaction.objectStore('cache');
+
+        const cacheEntry = await new Promise((resolve, reject) => {
+            const request = store.get(key);
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        });
+
+        if (!cacheEntry) return false;
+
+        const ageHours = (Date.now() - cacheEntry.timestamp) / (1000 * 60 * 60);
+        return ageHours <= CACHE_EXPIRY_HOURS;
+    } catch (error) {
+        console.warn(`[Cache] Failed to check validity for ${key}:`, error);
+        return false;
+    }
+}
+
+// Load all data from JSON files with caching
 async function loadAllData() {
+    isDataLoading = true;
     const loadingErrors = [];
     
     try {
-        // Load configuration
+        // Load configuration (always fetch fresh, cache for 24h)
+        const configKey = 'config';
         try {
-            appData.config = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.config}`, {
-                timeout: 5000,
-                retries: 2
-            });
-            console.log('Config loaded:', appData.config);
+            const cachedConfig = await getCache(configKey);
+            if (cachedConfig) {
+                appData.config = cachedConfig;
+                console.log('Config loaded from cache');
+            } else {
+                appData.config = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.config}`, {
+                    timeout: 5000,
+                    retries: 2
+                });
+                await setCache(configKey, appData.config);
+                console.log('Config loaded from API and cached');
+            }
         } catch (error) {
             console.warn('Config file not found, using defaults:', error.message);
             appData.config = {
@@ -228,23 +415,64 @@ async function loadAllData() {
             };
         }
         
-        // Load PR data
+        // Load PR data with caching
+        const prsKey = 'prs';
         try {
-            appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.prs}`, {
-                timeout: 10000,
-                retries: 2
-            });
-            console.log('PRs loaded:', appData.prs.length);
+            const cachedPRs = await getCache(prsKey);
+            if (cachedPRs && cachedPRs.length > 0) {
+                appData.prs = cachedPRs;
+                console.log('PRs loaded from cache:', appData.prs.length);
+            } else {
+                appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.prs}`, {
+                    timeout: 10000,
+                    retries: 2
+                });
+                await setCache(prsKey, appData.prs);
+                console.log('PRs loaded from API and cached:', appData.prs.length);
+            }
             
             // Check if prs.json is empty and fall back to sample data
             if (!appData.prs || appData.prs.length === 0) {
                 console.warn('PR data is empty, trying sample data');
+                const sampleKey = 'sample_prs';
+                const cachedSample = await getCache(sampleKey);
+                if (cachedSample && cachedSample.length > 0) {
+                    appData.prs = cachedSample;
+                    console.log('Sample PRs loaded from cache:', appData.prs.length);
+                } else {
+                    try {
+                        appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}sample_prs.json`, {
+                            timeout: 5000,
+                            retries: 1
+                        });
+                        await setCache(sampleKey, appData.prs);
+                        console.log('Sample PRs loaded from API and cached:', appData.prs.length);
+                        showWarning(typeof i18n !== 'undefined' ? 
+                            'Using sample data. GitHub Actions may not have generated real data yet.' :
+                            'サンプルデータを使用しています。GitHub Actionsがまだ実データを生成していない可能性があります。');
+                    } catch (e) {
+                        console.warn('Sample data also not found:', e.message);
+                        appData.prs = [];
+                        loadingErrors.push('PR data');
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('PR data not found, trying sample data:', error.message);
+            // Try to load sample data as fallback
+            const sampleKey = 'sample_prs';
+            const cachedSample = await getCache(sampleKey);
+            if (cachedSample && cachedSample.length > 0) {
+                appData.prs = cachedSample;
+                console.log('Sample PRs loaded from cache:', appData.prs.length);
+            } else {
                 try {
                     appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}sample_prs.json`, {
                         timeout: 5000,
                         retries: 1
                     });
-                    console.log('Sample PRs loaded:', appData.prs.length);
+                    await setCache(sampleKey, appData.prs);
+                    console.log('Sample PRs loaded from API and cached:', appData.prs.length);
                     showWarning(typeof i18n !== 'undefined' ? 
                         'Using sample data. GitHub Actions may not have generated real data yet.' :
                         'サンプルデータを使用しています。GitHub Actionsがまだ実データを生成していない可能性があります。');
@@ -254,59 +482,106 @@ async function loadAllData() {
                     loadingErrors.push('PR data');
                 }
             }
-        } catch (error) {
-            console.warn('PR data not found, trying sample data:', error.message);
-            // Try to load sample data as fallback
-            try {
-                appData.prs = await safeFetch(`${CONFIG.dataSource.basePath}sample_prs.json`, {
+        }
+        
+        // Load analytics data (optional) with caching
+        const analyticsKey = 'analytics';
+        try {
+            const cachedAnalytics = await getCache(analyticsKey);
+            if (cachedAnalytics) {
+                appData.analytics = cachedAnalytics;
+                console.log('Analytics loaded from cache');
+            } else {
+                appData.analytics = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.analytics}`, {
                     timeout: 5000,
                     retries: 1
                 });
-                console.log('Sample PRs loaded:', appData.prs.length);
-                showWarning(typeof i18n !== 'undefined' ? 
-                    'Using sample data. GitHub Actions may not have generated real data yet.' :
-                    'サンプルデータを使用しています。GitHub Actionsがまだ実データを生成していない可能性があります。');
-            } catch (e) {
-                console.warn('Sample data also not found:', e.message);
-                appData.prs = [];
-                loadingErrors.push('PR data');
+                await setCache(analyticsKey, appData.analytics);
+                console.log('Analytics loaded from API and cached');
             }
-        }
-        
-        // Load analytics data (optional)
-        try {
-            appData.analytics = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.analytics}`, {
-                timeout: 5000,
-                retries: 1
-            });
-            console.log('Analytics loaded');
         } catch (error) {
             console.warn('Analytics data not found:', error.message);
             appData.analytics = null;
         }
         
-        // Load cache info (optional)
+        // Load cache info (optional) with caching
+        const cacheInfoKey = 'cache_info';
         try {
-            appData.cacheInfo = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.cache_info}`, {
-                timeout: 5000,
-                retries: 1
-            });
-            console.log('Cache info loaded');
+            const cachedCacheInfo = await getCache(cacheInfoKey);
+            if (cachedCacheInfo) {
+                appData.cacheInfo = cachedCacheInfo;
+                console.log('Cache info loaded from cache');
+            } else {
+                appData.cacheInfo = await safeFetch(`${CONFIG.dataSource.basePath}${CONFIG.dataSource.files.cache_info}`, {
+                    timeout: 5000,
+                    retries: 1
+                });
+                await setCache(cacheInfoKey, appData.cacheInfo);
+                console.log('Cache info loaded from API and cached');
+            }
         } catch (error) {
             console.warn('Cache info not found:', error.message);
             appData.cacheInfo = null;
         }
         
-        // Load issues data (optional)
+        // Load issues data (optional) with caching
+        const issuesKey = 'issues';
         try {
-            appData.issues = await safeFetch(`${CONFIG.dataSource.basePath}issues.json`, {
-                timeout: 10000,
-                retries: 2
-            });
-            console.log('Issues loaded:', appData.issues.length);
+            const cachedIssues = await getCache(issuesKey);
+            if (cachedIssues) {
+                appData.issues = cachedIssues;
+                console.log('Issues loaded from cache:', appData.issues.length);
+            } else {
+                appData.issues = await safeFetch(`${CONFIG.dataSource.basePath}issues.json`, {
+                    timeout: 10000,
+                    retries: 2
+                });
+                await setCache(issuesKey, appData.issues);
+                console.log('Issues loaded from API and cached:', appData.issues.length);
+            }
         } catch (error) {
             console.warn('Issues data not found:', error.message);
             appData.issues = [];
+        }
+        
+        // Load statistics data (optional) with caching
+        const statisticsKey = 'statistics';
+        try {
+            const cachedStatistics = await getCache(statisticsKey);
+            if (cachedStatistics) {
+                appData.statistics = cachedStatistics;
+                console.log('Statistics loaded from cache');
+            } else {
+                appData.statistics = await safeFetch(`${CONFIG.dataSource.basePath}statistics.json`, {
+                    timeout: 5000,
+                    retries: 1
+                });
+                await setCache(statisticsKey, appData.statistics);
+                console.log('Statistics loaded from API and cached');
+            }
+        } catch (error) {
+            console.warn('Statistics data not found:', error.message);
+            appData.statistics = null;
+        }
+        
+        // Load fourkeys data (optional) with caching
+        const fourkeysKey = 'fourkeys';
+        try {
+            const cachedFourkeys = await getCache(fourkeysKey);
+            if (cachedFourkeys) {
+                appData.fourkeys = cachedFourkeys;
+                console.log('Four Keys loaded from cache');
+            } else {
+                appData.fourkeys = await safeFetch(`${CONFIG.dataSource.basePath}fourkeys.json`, {
+                    timeout: 5000,
+                    retries: 1
+                });
+                await setCache(fourkeysKey, appData.fourkeys);
+                console.log('Four Keys loaded from API and cached');
+            }
+        } catch (error) {
+            console.warn('Four Keys data not found:', error.message);
+            appData.fourkeys = null;
         }
         
         // Show summary of loading issues if any
@@ -316,98 +591,58 @@ async function loadAllData() {
                 'データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。';
             showError(`${errorMsg}\nMissing: ${loadingErrors.join(', ')}`);
         }
-        
     } catch (error) {
         console.error('Critical error loading data:', error);
         const errorMsg = typeof i18n !== 'undefined' ? i18n.t('error.data_load') : 'データの読み込みに失敗しました。GitHub Actionsが正常に実行されているか確認してください。';
         showError(errorMsg);
+    } finally {
+        isDataLoading = false;
+        // Enrich loaded PR data with derived review arrays if missing (for analytics parity)
+        try {
+            enrichPRData();
+        } catch (e) {
+            console.warn('[App] enrichPRData failed:', e);
+        }
+    }
+}
+
+// Refresh data for whichever page is currently active (excluding home)
+function refreshActivePageData() {
+    const activePageEl = document.querySelector('.page.active');
+    if (!activePageEl) return;
+    const pageId = activePageEl.id.replace('page-', '');
+    if (pageId === 'home') return; // nothing to refresh
+
+    console.log('[App] Refreshing active page after data load:', pageId);
+    switch (pageId) {
+        case 'dashboard':
+            if (typeof loadDashboardData === 'function') loadDashboardData();
+            break;
+        case 'analytics':
+            if (typeof loadAnalyticsData === 'function') loadAnalyticsData();
+            break;
+        case 'fourkeys':
+            if (typeof initializeFourKeysPage === 'function') initializeFourKeysPage();
+            break;
+        case 'statistics':
+            if (typeof initStatisticsPage === 'function') initStatisticsPage();
+            break;
+        case 'issues':
+            if (typeof loadIssuesData === 'function') loadIssuesData();
+            break;
     }
 }
 
 // Initialize home page
 function initializeHomePage() {
-    // Update primary repo info in sidebar
-    updatePrimaryRepoInfo();
-    
-    // Display repository list
-    displayRepositoryList();
-    
     // Display cache status
     displayCacheStatus();
+    
+    // Populate global repository filter
+    populateGlobalRepoFilter();
 }
 
 // Update primary repository info in sidebar
-function updatePrimaryRepoInfo() {
-    const primaryRepoInfo = document.getElementById('primaryRepoInfo');
-    
-    if (appData.config && appData.config.repositories && appData.config.repositories.length > 0) {
-        const primaryIndex = appData.config.primaryRepoIndex || 0;
-        const primaryRepo = appData.config.repositories[primaryIndex];
-        
-        primaryRepoInfo.innerHTML = `
-            <strong>${primaryRepo.name}</strong>
-            <code>${primaryRepo.owner}/${primaryRepo.repo}</code>
-        `;
-    } else {
-        primaryRepoInfo.innerHTML = '<div class="loading">設定なし</div>';
-    }
-}
-
-// Display repository list on home page
-function displayRepositoryList() {
-    const repoList = document.getElementById('repoList');
-    
-    if (!appData.config || !appData.config.repositories || appData.config.repositories.length === 0) {
-        repoList.innerHTML = `
-            <div class="card">
-                <p>リポジトリが設定されていません。</p>
-                <p>設定方法については <a href="#setup">セットアップガイド</a> を参照してください。</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const repositories = appData.config.repositories;
-    const primaryIndex = appData.config.primaryRepoIndex || 0;
-    
-    repoList.innerHTML = repositories.map((repo, index) => {
-        const isSelected = index === primaryIndex;
-        const selectedClass = isSelected ? 'selected' : '';
-        const badge = isSelected ? '<div class="badge">プライマリー</div>' : '';
-        
-        return `
-            <div class="repo-card ${selectedClass}" data-index="${index}" onclick="selectRepository(${index})">
-                <h4>${repo.name}</h4>
-                <code>${repo.owner}/${repo.repo}</code>
-                ${badge}
-            </div>
-        `;
-    }).join('');
-    
-    // Display selected repo info
-    displaySelectedRepoInfo(primaryIndex);
-}
-
-// Select a repository
-function selectRepository(index) {
-    appData.config.primaryRepoIndex = index;
-    appData.primaryRepoIndex = index;
-    
-    // Update display
-    displayRepositoryList();
-    updatePrimaryRepoInfo();
-}
-
-// Display selected repository info
-function displaySelectedRepoInfo(index) {
-    const selectedRepoInfo = document.getElementById('selectedRepoInfo');
-    const repo = appData.config.repositories[index];
-    
-    selectedRepoInfo.innerHTML = `
-        <strong>プライマリー:</strong> <strong>${repo.name}</strong> (<code>${repo.owner}/${repo.repo}</code>)
-    `;
-}
-
 // Display cache status
 function displayCacheStatus() {
     const cacheStatus = document.getElementById('cacheStatus');
@@ -539,6 +774,233 @@ function filterPRs(prs, criteria) {
     });
 }
 
+// Handle global repository filter change
+function handleGlobalRepoFilterChange() {
+    const globalFilter = document.getElementById('globalRepoFilter');
+    if (!globalFilter) return;
+    
+    const selectedRepo = globalFilter.value;
+    console.log('Global filter changed to:', selectedRepo || 'All repositories');
+    
+    // Save to localStorage
+    if (selectedRepo) {
+        localStorage.setItem('globalRepoFilter', selectedRepo);
+    } else {
+        localStorage.removeItem('globalRepoFilter');
+    }
+    
+    // Show visual feedback
+    showFilterChangeIndicator();
+    
+    // Update global repo info display
+    updateGlobalRepoInfo(selectedRepo);
+    
+    // Sync with page-specific filters
+    syncRepoFilters(selectedRepo);
+    
+    // Reload current page data
+    const activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    
+    const pageId = activePage.id.replace('page-', '');
+    console.log('Reloading data for page:', pageId);
+    
+    switch (pageId) {
+        case 'fourkeys':
+            if (typeof loadFourKeysData === 'function') loadFourKeysData();
+            break;
+        case 'analytics':
+            if (typeof loadAnalyticsData === 'function') loadAnalyticsData();
+            break;
+        case 'statistics':
+            if (typeof initStatisticsPage === 'function') initStatisticsPage();
+            break;
+        case 'dashboard':
+            if (typeof loadDashboardData === 'function') loadDashboardData();
+            break;
+        case 'issues':
+            if (typeof loadIssuesOverview === 'function') {
+                // Reload the currently active issues tab
+                const activeTab = document.querySelector('.issues-tab.active');
+                if (activeTab) {
+                    const tabName = activeTab.dataset.tab;
+                    document.querySelectorAll('.issues-tab-content').forEach(tab => tab.classList.remove('active'));
+                    document.getElementById(`issues-${tabName}`).classList.add('active');
+                    
+                    switch(tabName) {
+                        case 'overview': loadIssuesOverview(); break;
+                        case 'timeline': loadIssuesTimeline(); break;
+                        case 'cycletime': loadCycleTimeAnalysis(); break;
+                        case 'linking': loadIssuePRLinking(); break;
+                        case 'milestone': loadMilestoneTracking(); break;
+                        case 'velocity': loadTeamVelocity(); break;
+                    }
+                } else {
+                    loadIssuesOverview(); // Default to overview
+                }
+            }
+            break;
+        case 'file-history':
+            if (typeof initializeFileHistoryPage === 'function') {
+                initializeFileHistoryPage();
+            }
+            break;
+    }
+}
+
+// Update global repository info display (Always visible, updates repo name)
+function updateGlobalRepoInfo(selectedRepo) {
+    const globalRepoInfo = document.getElementById('globalRepoInfo');
+    const globalRepoName = document.getElementById('globalRepoName');
+    
+    if (!globalRepoInfo || !globalRepoName) return;
+    
+    if (selectedRepo) {
+        // Find repository name from config
+        const repo = appData.config?.repositories?.find(r => `${r.owner}/${r.repo}` === selectedRepo);
+        const displayName = repo ? repo.name : selectedRepo;
+        
+        globalRepoName.textContent = displayName;
+        globalRepoInfo.classList.add('active-filter');
+    } else {
+        globalRepoName.textContent = 'すべてのリポジトリ';
+        globalRepoInfo.classList.remove('active-filter');
+    }
+}
+
+// Sync all page-specific repo filters with global filter (now deprecated - only global filter exists)
+function syncRepoFilters(selectedValue) {
+    // This function is kept for compatibility but no longer needed
+    // All pages now use globalRepoFilter directly
+    console.log('[syncRepoFilters] Deprecated - all pages use globalRepoFilter');
+}
+
+// Populate global repository filter
+function populateGlobalRepoFilter() {
+    const globalFilter = document.getElementById('globalRepoFilter');
+    if (!globalFilter || !appData.config || !appData.config.repositories) return;
+    
+    const options = ['<option value="">すべてのリポジトリ</option>'];
+    appData.config.repositories.forEach((repo, idx) => {
+        options.push(`<option value="${repo.owner}/${repo.repo}">${repo.name}</option>`);
+    });
+    globalFilter.innerHTML = options.join('');
+
+    // Restore from localStorage if exists
+    const savedFilter = localStorage.getItem('globalRepoFilter');
+    if (savedFilter) {
+        globalFilter.value = savedFilter;
+        updateGlobalRepoInfo(savedFilter);
+        console.log('Restored repository filter from localStorage:', savedFilter);
+    } else {
+        // 初期選択をプライマリーレポジトリへ設定
+        const primaryIndex = appData.config.primaryRepoIndex || 0;
+        const primaryRepo = appData.config.repositories[primaryIndex];
+        if (primaryRepo) {
+            const value = `${primaryRepo.owner}/${primaryRepo.repo}`;
+            globalFilter.value = value;
+            localStorage.setItem('globalRepoFilter', value);
+            updateGlobalRepoInfo(value);
+        }
+    }
+}
+
+// Show visual feedback when filter changes
+function showFilterChangeIndicator() {
+    // Add a brief highlight animation to the filter
+    const globalFilter = document.getElementById('globalRepoFilter');
+    if (!globalFilter) return;
+    
+    // Add flash class
+    globalFilter.style.transition = 'box-shadow 0.3s ease';
+    globalFilter.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.5)';
+    
+    setTimeout(() => {
+        globalFilter.style.boxShadow = '';
+    }, 300);
+    
+    // Show a subtle loading indicator on the active page
+    const activePage = document.querySelector('.page.active');
+    if (activePage) {
+        activePage.style.opacity = '0.6';
+        setTimeout(() => {
+            activePage.style.opacity = '1';
+        }, 200);
+    }
+}
+
+// Navigate to PR detail page
+function navigateToPRDetail(owner, repo, prNumber) {
+    console.log(`Navigating to PR detail: ${owner}/${repo}#${prNumber}`);
+    
+    // Store PR info in session storage (as backup)
+    sessionStorage.setItem('pr_detail_owner', owner);
+    sessionStorage.setItem('pr_detail_repo', repo);
+    sessionStorage.setItem('pr_detail_number', prNumber);
+    
+    // Navigate to PR detail page, skip initialization
+    navigateToPage('pr-detail', true);
+    
+    // Immediately load the PR detail with the correct parameters
+    if (typeof loadPRDetail === 'function') {
+        loadPRDetail(owner, repo, prNumber);
+    }
+    
+    // Scroll to top of page
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
 // Export functions for use in other modules
 window.navigateToPage = navigateToPage;
+window.navigateToPRDetail = navigateToPRDetail;
+window.goBack = goBack;
 window.selectRepository = selectRepository;
+window.handleGlobalRepoFilterChange = handleGlobalRepoFilterChange;
+window.refreshActivePageData = refreshActivePageData;
+
+// Add derived fields similar to Streamlit preprocessing (reviews array, reviewThreads, etc.)
+function enrichPRData() {
+    if (!appData.prs || appData.prs.length === 0) return;
+    const now = new Date();
+    appData.prs.forEach(pr => {
+        // Normalize reviews array from review_details
+        if (!pr.reviews && pr.review_details) {
+            pr.reviews = pr.review_details.map(r => ({
+                author: r.author,
+                state: r.state,
+                createdAt: r.createdAt
+            }));
+        }
+        // Backfill counts for uniform access
+        pr.reviews_count = typeof pr.reviews_count === 'number' ? pr.reviews_count : (pr.reviews ? pr.reviews.length : 0);
+        pr.comments = typeof pr.comments_count === 'number' ? pr.comments_count : pr.comments_count || 0;
+        pr.changedFiles = pr.changedFiles || 0;
+        pr.reviewThreads = pr.review_threads || pr.unresolved_threads || 0;
+
+        // Age hours (終了済みは終了時点、OPENは現在時刻まで)
+        const endRef = pr.mergedAt ? new Date(pr.mergedAt) : (pr.closedAt ? new Date(pr.closedAt) : now);
+        const createdDt = pr.createdAt ? new Date(pr.createdAt) : now;
+        pr.age_hours = Math.max(0, (endRef - createdDt) / (1000 * 60 * 60));
+
+        // Business hours/days (utilの高精度計算を優先。フェールバックに簡易版)
+        try {
+            if (typeof window.calculateBusinessHours === 'function') {
+                const bh = window.calculateBusinessHours(pr.createdAt, endRef);
+                pr.business_hours = bh.business_hours;
+                pr.business_days = bh.business_days;
+            } else {
+                // 簡易週末除外近似 (5/7)
+                pr.business_hours = pr.age_hours * (5/7);
+                pr.business_days = pr.business_hours / 24;
+            }
+        } catch (e) {
+            console.warn('[enrichPRData] business hour calc failed', e);
+            pr.business_hours = pr.age_hours * (5/7);
+            pr.business_days = pr.business_hours / 24;
+        }
+    });
+    console.log('[App] PR data enriched for front-end analytics');
+}

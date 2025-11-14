@@ -92,6 +92,11 @@ const i18n = {
             'statistics.title': '統計情報・週間レポート',
             'statistics.subtitle': '開発プロセスの現状を理解し、改善の機会を見つけるための包括的な統計情報',
             
+            // File History
+            'nav.filehistory': 'ファイル履歴',
+            'filehistory.title': 'ファイル別PR履歴',
+            'filehistory.subtitle': 'ファイルやディレクトリごとのPR更新履歴・会話履歴を確認',
+            
             // Issues
             'nav.issues': 'Issue管理',
             'issues.title': 'Issue管理・分析',
@@ -228,6 +233,11 @@ const i18n = {
             'nav.statistics': 'Statistics & Reports',
             'statistics.title': 'Statistics & Weekly Reports',
             'statistics.subtitle': 'Comprehensive statistics to understand the current state of development processes and find opportunities for improvement',
+            
+            // File History
+            'nav.filehistory': 'File History',
+            'filehistory.title': 'PR History by File',
+            'filehistory.subtitle': 'View PR update history and conversation history for each file or directory',
             
             // Issues
             'nav.issues': 'Issue Management',

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRダッシュボード - GitHub PR Dashboard</title>
+    <link rel="stylesheet" href="css/style.css?v=20251113-16">
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script src="js/i18n.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 data-i18n="github_pr_tools">GitHub PR Tools</h1>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button id="themeToggle" class="theme-toggle" onclick="toggleTheme()" title="Toggle dark mode">
+                        <span id="themeIcon">🌙</span>
+                    </button>
+                    <button id="langToggle" class="lang-toggle" onclick="toggleLanguage()">EN</button>
+                </div>
+            </div>
+
+            <div class="sidebar-content">
+                <!-- Repository Filter in Sidebar -->
+                <div class="sidebar-filter">
+                    <label for="globalRepoFilter" style="display: block; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                        📁 リポジトリフィルタ
+                    </label>
+                    <select id="globalRepoFilter" class="sidebar-select" onchange="handleGlobalRepoFilterChange()">
+                        <option value="">すべてのリポジトリ</option>
+                    </select>
+                </div>
+
+                <nav class="sidebar-nav">
+                    <a href="index.html" class="nav-item" data-page="home">
+                        <span class="nav-icon">🏠</span>
+                        <span class="nav-label" data-i18n="nav.home">ホーム</span>
+                    </a>
+                    <a href="dashboard.html" class="nav-item active" data-page="dashboard">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.dashboard">PRダッシュボード</span>
+                    </a>
+                    <a href="analytics.html" class="nav-item" data-page="analytics">
+                        <span class="nav-icon">📈</span>
+                        <span class="nav-label" data-i18n="nav.analytics">PR分析</span>
+                    </a>
+                    <a href="fourkeys.html" class="nav-item" data-page="fourkeys">
+                        <span class="nav-icon">🔑</span>
+                        <span class="nav-label" data-i18n="nav.fourkeys">Four Keys</span>
+                    </a>
+                    <a href="statistics.html" class="nav-item" data-page="statistics">
+                        <span class="nav-icon">📊</span>
+                        <span class="nav-label" data-i18n="nav.statistics">統計・レポート</span>
+                    </a>
+                    <a href="file-history.html" class="nav-item" data-page="file-history">
+                        <span class="nav-icon">📁</span>
+                        <span class="nav-label" data-i18n="nav.filehistory">ファイル履歴</span>
+                    </a>
+                    <a href="issues.html" class="nav-item" data-page="issues">
+                        <span class="nav-icon">🎯</span>
+                        <span class="nav-label" data-i18n="nav.issues">Issue管理</span>
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Back Button - Hidden by default -->
+            <button id="back-button" class="back-button" onclick="goBack()" style="display: none;">
+                <span class="back-icon">←</span>
+                <span class="back-label">戻る</span>
+            </button>
+
+            <!-- Global Repository Selection Info - Always Visible -->
+            <div id="globalRepoInfo" class="global-repo-info">
+                <div class="repo-info-content">
+                    <span class="repo-info-icon">📁</span>
+                    <span class="repo-info-label">現在のリポジトリ:</span>
+                    <span id="globalRepoName" class="repo-info-name">すべてのリポジトリ</span>
+                </div>
+            </div>
+
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <h1>PRダッシュボード</h1>
+
+                <div class="dashboard-controls">
+                    <div class="control-group">
+                        <label for="stateFilter">状態:</label>
+                        <select id="stateFilter" class="form-select" multiple>
+                            <option value="OPEN" selected>Open</option>
+                            <option value="MERGED" selected>Merged</option>
+                            <option value="CLOSED">Closed</option>
+                        </select>
+                    </div>
+
+                    <div class="control-group">
+                        <label for="daysFilter">期間:</label>
+                        <select id="daysFilter" class="form-select">
+                            <option value="30">過去30日</option>
+                            <option value="60">過去60日</option>
+                            <option value="90" selected>過去90日</option>
+                            <option value="180">過去180日</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="loadDashboardData()">
+                        更新
+                    </button>
+                </div>
+
+                <div class="metrics-row" id="dashboardMetrics">
+                    <!-- Metrics will be inserted here -->
+                </div>
+
+                <div class="chart-container">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h2>PRタイムライン</h2>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label for="timelineLimit" style="font-size: 0.9rem; color: var(--text-muted);">表示件数:</label>
+                            <select id="timelineLimit" class="sidebar-select" style="width: auto; padding: 0.4rem 0.8rem;" onchange="handleTimelineLimitChange()">
+                                <option value="10">10件</option>
+                                <option value="20">20件</option>
+                                <option value="30" selected>30件</option>
+                                <option value="50">50件</option>
+                                <option value="100">100件</option>
+                                <option value="all">すべて</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="timelineChart" class="chart-area">
+                        <div class="loading">Loading chart...</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <h2>PR一覧</h2>
+                    <div id="prTable" class="table-container">
+                        <div class="loading">Loading table...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PR Detail Page (for navigation) -->
+            <div id="page-pr-detail" class="page">
+                <div style="margin-bottom: 1rem;">
+                    <button onclick="window.location.href='dashboard.html'" style="background: var(--secondary-color); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer;">
+                        ← ダッシュボードに戻る
+                    </button>
+                </div>
+
+                <div id="pr-detail-content">
+                    <div class="loading">Loading PR details...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/config.js?v=20251113-17"></script>
+    <script src="js/utils.js?v=20251113-18"></script>
+    <script src="js/action-tracker.js?v=20251113-18"></script>
+    <script src="js/app.js?v=20251113-18"></script>
+    <script src="js/dashboard.js?v=20251113-18"></script>
+    <script src="js/pr-detail.js?v=20251113-18"></script>
+</body>
+</html>

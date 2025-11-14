@@ -1,17 +1,46 @@
 // Statistics Page Logic - 統計情報と週間レポート
 
+// Helper function: Calculate median
+function median(arr) {
+    if (!arr || arr.length === 0) return 0;
+    const sorted = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 // Global variables
 let currentPeriod = 'thisWeek';
 let weeklyStats = null;
 let historicalData = null;
 let viewMode = 'current'; // 'current' or 'historical'
 
+// Global variables for Four Keys integration
+let fourKeysData = null;
+
 // Initialize statistics page
 function initStatisticsPage() {
     console.log('Initializing statistics page...');
+    
+    // Check if data is available
+    if (!appData || !appData.prs || appData.prs.length === 0) {
+        console.warn('[Statistics] Waiting for PR data to load...');
+        // Retry after a short delay if data hasn't loaded yet
+        setTimeout(() => {
+            if (appData && appData.prs && appData.prs.length > 0) {
+                console.log('[Statistics] Data loaded, initializing...');
+                initStatisticsPage();
+            } else {
+                console.error('[Statistics] No PR data available after retry');
+            }
+        }, 1000);
+        return;
+    }
+    
+    console.log('[Statistics] Initializing with', appData.prs.length, 'PRs');
     loadHistoricalData();
-    loadStatisticsData();
     setupEventListeners();
+    loadStatisticsData();
+    loadFourKeysDataForStatistics();
 }
 
 // Load historical statistics data
@@ -353,22 +382,33 @@ function displayHistoricalTrends(periodType, currentIndex) {
 // Load statistics data
 function loadStatisticsData() {
     console.log('Loading statistics data for period:', currentPeriod);
-    
+
     if (!appData || !appData.prs) {
         console.error('No PR data available');
         return;
+    }
+
+    // Use global repo filter (unified)
+    const globalFilter = document.getElementById('globalRepoFilter');
+    const selectedRepo = globalFilter ? globalFilter.value : '';
+    let filteredPRs = appData.prs;
+
+    if (selectedRepo) {
+        const [owner, repo] = selectedRepo.split('/');
+        filteredPRs = filteredPRs.filter(pr => pr.owner === owner && pr.repo === repo);
+        console.log(`[Statistics] Filtered to ${filteredPRs.length} PRs for ${selectedRepo}`);
     }
     
     // Calculate date ranges
     const { currentStart, currentEnd, previousStart, previousEnd } = getDateRanges(currentPeriod);
     
     // Filter PRs by period
-    const currentPRs = appData.prs.filter(pr => {
+    const currentPRs = filteredPRs.filter(pr => {
         const created = new Date(pr.createdAt);
         return created >= currentStart && created < currentEnd;
     });
     
-    const previousPRs = appData.prs.filter(pr => {
+    const previousPRs = filteredPRs.filter(pr => {
         const created = new Date(pr.createdAt);
         return created >= previousStart && created < previousEnd;
     });
@@ -379,9 +419,20 @@ function loadStatisticsData() {
     // Display statistics
     displaySummaryCards(weeklyStats);
     displayCharts(currentPRs);
-    displayTrends();
-    displayInsights(weeklyStats, appData.prs);
+    displayTrends(filteredPRs);
+    displayInsights(weeklyStats, filteredPRs);
     displayRecommendations(weeklyStats);
+    
+    // Display detailed statistics
+    displayAuthorStats(currentPRs);
+    displayReviewerStats(currentPRs);
+    
+    // Display Four Keys metrics and correlation analysis
+    displayFourKeysMetricsInStatistics();
+    if (fourKeysData && fourKeysData.metrics) {
+        const correlations = analyzeMetricsCorrelation(weeklyStats, fourKeysData.metrics);
+        displayCorrelationInsights(correlations);
+    }
 }
 
 // Get date ranges based on selected period
@@ -525,6 +576,10 @@ function calculateWeeklyStatistics(currentPRs, previousPRs) {
     stats.avgReviewsPerPR = stats.totalPRs > 0 ? stats.totalReviews / stats.totalPRs : 0;
     stats.avgCommentsPerPR = stats.totalPRs > 0 ? stats.totalComments / stats.totalPRs : 0;
     
+    // New metrics: PR Review Time, Review Depth, PR Size
+    const newMetrics = calculateNewMetrics(currentPRs);
+    Object.assign(stats, newMetrics);
+    
     return stats;
 }
 
@@ -609,6 +664,9 @@ function displayReviewMetrics(currentPRs) {
     const avgReviews = currentPRs.length > 0 ? (totalReviews / currentPRs.length).toFixed(1) : 0;
     const avgComments = currentPRs.length > 0 ? (totalComments / currentPRs.length).toFixed(1) : 0;
     
+    // Calculate new metrics
+    const newMetrics = calculateNewMetrics(currentPRs);
+    
     const container = document.getElementById('reviewMetrics');
     if (container) {
         container.innerHTML = `
@@ -622,12 +680,60 @@ function displayReviewMetrics(currentPRs) {
                 <div class="metric-value">${totalComments}</div>
                 <div class="metric-sub">PR当たり平均: ${avgComments}件</div>
             </div>
+            <div class="review-metric-item">
+                <div class="metric-label">平均レビュー時間</div>
+                <div class="metric-value">${newMetrics.avgReviewTime.toFixed(1)}時間</div>
+                <div class="metric-sub">PR作成から最初のレビューまで</div>
+            </div>
+            <div class="review-metric-item">
+                <div class="metric-label">平均レビューの深さ</div>
+                <div class="metric-value">${newMetrics.avgReviewDepth.toFixed(1)}</div>
+                <div class="metric-sub">PR当たりのレビューコメント数</div>
+            </div>
+            <div class="review-metric-item">
+                <div class="metric-label">平均PRサイズ</div>
+                <div class="metric-value">${newMetrics.avgPRSize.toFixed(0)}行</div>
+                <div class="metric-sub">変更行数: ${newMetrics.avgChangedFiles.toFixed(1)}ファイル</div>
+            </div>
         `;
+    }
+    
+    // Display review decision stats (inline if container exists)
+    const decisionContainer = document.getElementById('reviewDecisionStats');
+    if (decisionContainer && newMetrics.reviewDecisionStats) {
+        const stats = newMetrics.reviewDecisionStats;
+        const total = stats.approved + stats.changes_requested + stats.commented;
+        if (total > 0) {
+            decisionContainer.innerHTML = `
+                <h4>レビュー決定の内訳</h4>
+                <div class="decision-stats-grid">
+                    <div class="decision-stat">
+                        <span class="decision-label">✅ 承認</span>
+                        <span class="decision-value">${stats.approved} (${(stats.approved / total * 100).toFixed(0)}%)</span>
+                    </div>
+                    <div class="decision-stat">
+                        <span class="decision-label">🔄 変更要求</span>
+                        <span class="decision-value">${stats.changes_requested} (${(stats.changes_requested / total * 100).toFixed(0)}%)</span>
+                    </div>
+                    <div class="decision-stat">
+                        <span class="decision-label">💬 コメント</span>
+                        <span class="decision-value">${stats.commented} (${(stats.commented / total * 100).toFixed(0)}%)</span>
+                    </div>
+                </div>
+            `;
+        }
     }
 }
 
 // Display trend analysis (last 8 weeks)
-function displayTrends() {
+function displayTrends(prsToAnalyze) {
+    // Use provided PRs or fall back to appData.prs
+    const prs = prsToAnalyze || (appData ? appData.prs : []);
+    if (!prs || prs.length === 0) {
+        console.warn('[Statistics] No PRs available for trend analysis');
+        return;
+    }
+    
     const now = new Date();
     const weeksData = [];
     
@@ -639,7 +745,7 @@ function displayTrends() {
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 7);
         
-        const weekPRs = appData.prs.filter(pr => {
+        const weekPRs = prs.filter(pr => {
             const created = new Date(pr.createdAt);
             return created >= weekStart && created < weekEnd;
         });
@@ -651,11 +757,21 @@ function displayTrends() {
             return (merged - created) / (1000 * 60 * 60 * 24);
         });
         
+        // Calculate review metrics for this week
+        const weekMetrics = calculateNewMetrics(weekPRs);
+        const totalReviews = weekPRs.reduce((sum, pr) => sum + (pr.reviews_count || 0), 0);
+        const totalComments = weekPRs.reduce((sum, pr) => sum + (pr.comments_count || 0), 0);
+        
         weeksData.push({
             week: `${weekStart.getMonth() + 1}/${weekStart.getDate()}`,
             prCount: weekPRs.length,
             mergedCount: mergedPRs.length,
-            avgLeadTime: leadTimes.length > 0 ? median(leadTimes) : 0
+            avgLeadTime: leadTimes.length > 0 ? median(leadTimes) : 0,
+            avgReviewTime: weekMetrics.avgReviewTime,
+            avgReviewDepth: weekMetrics.avgReviewDepth,
+            avgPRSize: weekMetrics.avgPRSize,
+            totalReviews: totalReviews,
+            totalComments: totalComments
         });
     }
     
@@ -677,7 +793,13 @@ function displayTrends() {
         height: 300
     };
     
-    Plotly.newPlot('trendPRChart', [prCountTrace], prCountLayout, { responsive: true, displaylogo: false });
+    try {
+        Plotly.newPlot('trendPRChart', [prCountTrace], prCountLayout, { responsive: true, displaylogo: false });
+    } catch (error) {
+        console.error('[Statistics] Failed to create PR count trend chart:', error);
+        const container = document.getElementById('trendPRChart');
+        if (container) container.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">チャート表示エラー</div>';
+    }
     
     // Lead time trend
     const leadTimeTrace = {
@@ -697,7 +819,100 @@ function displayTrends() {
         height: 300
     };
     
-    Plotly.newPlot('trendLeadTimeChart', [leadTimeTrace], leadTimeLayout, { responsive: true, displaylogo: false });
+    try {
+        Plotly.newPlot('trendLeadTimeChart', [leadTimeTrace], leadTimeLayout, { responsive: true, displaylogo: false });
+    } catch (error) {
+        console.error('[Statistics] Failed to create lead time trend chart:', error);
+        const container = document.getElementById('trendLeadTimeChart');
+        if (container) container.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">チャート表示エラー</div>';
+    }
+    
+    // Review activity trends (NEW!)
+    displayReviewActivityTrends(weeksData);
+}
+
+// Display review activity trends
+function displayReviewActivityTrends(weeksData) {
+    // Review Time Trend
+    const reviewTimeTrace = {
+        x: weeksData.map(w => w.week),
+        y: weeksData.map(w => w.avgReviewTime),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'レビュー時間',
+        line: { color: '#8b5cf6', width: 3 },
+        marker: { size: 8 }
+    };
+    
+    const reviewTimeLayout = {
+        title: '平均レビュー時間の推移',
+        xaxis: { title: '週' },
+        yaxis: { title: 'レビュー時間 (時間)' },
+        height: 300
+    };
+    
+    try {
+        const container = document.getElementById('trendReviewTimeChart');
+        if (container) {
+            Plotly.newPlot('trendReviewTimeChart', [reviewTimeTrace], reviewTimeLayout, { responsive: true, displaylogo: false });
+        }
+    } catch (error) {
+        console.error('[Statistics] Failed to create review time trend chart:', error);
+    }
+    
+    // Review Depth Trend
+    const reviewDepthTrace = {
+        x: weeksData.map(w => w.week),
+        y: weeksData.map(w => w.avgReviewDepth),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'レビューの深さ',
+        line: { color: '#ec4899', width: 3 },
+        marker: { size: 8 }
+    };
+    
+    const reviewDepthLayout = {
+        title: 'レビューの深さの推移',
+        xaxis: { title: '週' },
+        yaxis: { title: 'レビューコメント数' },
+        height: 300
+    };
+    
+    try {
+        const container = document.getElementById('trendReviewDepthChart');
+        if (container) {
+            Plotly.newPlot('trendReviewDepthChart', [reviewDepthTrace], reviewDepthLayout, { responsive: true, displaylogo: false });
+        }
+    } catch (error) {
+        console.error('[Statistics] Failed to create review depth trend chart:', error);
+    }
+    
+    // PR Size Trend
+    const prSizeTrace = {
+        x: weeksData.map(w => w.week),
+        y: weeksData.map(w => w.avgPRSize),
+        type: 'scatter',
+        mode: 'lines+markers',
+        name: 'PRサイズ',
+        line: { color: '#14b8a6', width: 3 },
+        marker: { size: 8 }
+    };
+    
+    const prSizeLayout = {
+        title: '平均PRサイズの推移',
+        xaxis: { title: '週' },
+        yaxis: { title: '変更行数' },
+        height: 300
+    };
+    
+    try {
+        const container = document.getElementById('trendPRSizeChart');
+        if (container) {
+            Plotly.newPlot('trendPRSizeChart', [prSizeTrace], prSizeLayout, { responsive: true, displaylogo: false });
+        }
+    } catch (error) {
+        console.error('[Statistics] Failed to create PR size trend chart:', error);
+    }
 }
 
 // Display insights
@@ -757,6 +972,73 @@ function displayInsights(stats, allPRs) {
             title: '活発なレビュー活動',
             message: `PR当たりの平均レビュー数が${stats.avgReviewsPerPR.toFixed(1)}回です。チーム全体でレビューに積極的に参加しています。`
         });
+    }
+    
+    // New metrics insights
+    // PR Review Time
+    if (stats.avgReviewTime > 24) { // More than 24 hours
+        insights.push({
+            type: 'warning',
+            title: 'レビュー開始の遅れ',
+            message: `PR作成から最初のレビューまでの平均時間が${stats.avgReviewTime.toFixed(1)}時間です。レビュー担当者のアサインを迅速化することをお勧めします。`
+        });
+    } else if (stats.avgReviewTime < 2) { // Less than 2 hours
+        insights.push({
+            type: 'success',
+            title: '迅速なレビュー開始',
+            message: `PR作成から最初のレビューまでの平均時間が${stats.avgReviewTime.toFixed(1)}時間です。レビュープロセスが効率的に機能しています。`
+        });
+    }
+    
+    // Review Depth
+    if (stats.avgReviewDepth < 2) {
+        insights.push({
+            type: 'warning',
+            title: 'レビューの深さが不足',
+            message: `PR当たりの平均レビューコメント数が${stats.avgReviewDepth.toFixed(1)}件です。より詳細なレビューを実施することで品質向上が期待できます。`
+        });
+    } else if (stats.avgReviewDepth > 10) {
+        insights.push({
+            type: 'info',
+            title: '詳細なレビュー実施',
+            message: `PR当たりの平均レビューコメント数が${stats.avgReviewDepth.toFixed(1)}件です。チームで徹底的なレビューが行われています。`
+        });
+    }
+    
+    // PR Size
+    if (stats.avgPRSize > 500) { // Large PRs
+        insights.push({
+            type: 'warning',
+            title: 'PRサイズが大きい',
+            message: `PRの平均変更行数が${stats.avgPRSize.toFixed(0)}行です。小さなPRに分割することでレビュー効率が向上します。`
+        });
+    } else if (stats.avgPRSize < 50) { // Very small PRs
+        insights.push({
+            type: 'info',
+            title: '適切なPRサイズ',
+            message: `PRの平均変更行数が${stats.avgPRSize.toFixed(0)}行です。適切なサイズのPRが作成されています。`
+        });
+    }
+    
+    // Review Decision balance
+    const totalDecisions = stats.reviewDecisionStats.approved + stats.reviewDecisionStats.changes_requested + stats.reviewDecisionStats.commented;
+    if (totalDecisions > 0) {
+        const approveRate = (stats.reviewDecisionStats.approved / totalDecisions * 100);
+        const changeRate = (stats.reviewDecisionStats.changes_requested / totalDecisions * 100);
+        
+        if (changeRate > 30) {
+            insights.push({
+                type: 'warning',
+                title: 'レビュー基準の厳格化',
+                message: `レビューの${changeRate.toFixed(0)}%で変更要求が出されています。レビュー基準を見直すか、コード品質の向上を検討してください。`
+            });
+        } else if (approveRate > 80) {
+            insights.push({
+                type: 'info',
+                title: 'スムーズなレビュー通過',
+                message: `レビューの${approveRate.toFixed(0)}%が承認されています。コード品質が安定しています。`
+            });
+        }
     }
     
     // Stale PRs
@@ -856,6 +1138,63 @@ function displayRecommendations(stats) {
         });
     }
     
+    // New metrics recommendations
+    // Long review time
+    if (stats.avgReviewTime > 24) {
+        recommendations.push({
+            title: 'レビュー開始時間の短縮',
+            actions: [
+                'PR作成時の自動レビュワーアサイン',
+                'レビュワー通知の改善（Slack/Mail）',
+                'レビュワー不在時のバックアップ体制',
+                'レビュー待ちPRの可視化ダッシュボード作成'
+            ]
+        });
+    }
+    
+    // Low review depth
+    if (stats.avgReviewDepth < 2) {
+        recommendations.push({
+            title: 'レビュー品質の向上',
+            actions: [
+                'レビューガイドラインの詳細化',
+                'レビュー研修の実施',
+                'コードレビューツールの活用',
+                'レビューポイントのチェックリスト作成'
+            ]
+        });
+    }
+    
+    // Large PR size
+    if (stats.avgPRSize > 500) {
+        recommendations.push({
+            title: 'PRサイズの最適化',
+            actions: [
+                'コミット粒度の見直し',
+                '機能ブランチ戦略の改善',
+                'コード分割の検討',
+                'PRサイズ制限の設定'
+            ]
+        });
+    }
+    
+    // High change request rate
+    const totalDecisions = stats.reviewDecisionStats.approved + stats.reviewDecisionStats.changes_requested + stats.reviewDecisionStats.commented;
+    if (totalDecisions > 0) {
+        const changeRate = (stats.reviewDecisionStats.changes_requested / totalDecisions * 100);
+        if (changeRate > 30) {
+            recommendations.push({
+                title: 'レビュー基準の適正化',
+                actions: [
+                    'レビュー基準の明確化',
+                    '事前コード品質チェックの導入',
+                    '自動テストカバレッジの向上',
+                    'コード品質メトリクスの導入'
+                ]
+            });
+        }
+    }
+    
     // Display recommendations
     const container = document.getElementById('recommendationsContainer');
     if (container) {
@@ -917,6 +1256,15 @@ function downloadWeeklyReport() {
 
 ---
 
+## 新規指標
+
+- **平均レビュー開始時間**: ${weeklyStats.avgReviewTime.toFixed(1)}時間
+- **平均レビューの深さ**: ${weeklyStats.avgReviewDepth.toFixed(1)}件
+- **平均PRサイズ**: ${weeklyStats.avgPRSize.toFixed(0)}行 (${weeklyStats.avgChangedFiles.toFixed(1)}ファイル)
+- **レビュー決定分布**: 承認${weeklyStats.reviewDecisionStats.approved}件, 変更要求${weeklyStats.reviewDecisionStats.changes_requested}件, コメント${weeklyStats.reviewDecisionStats.commented}件
+
+---
+
 *このレポートは GitHub PR Dashboard により自動生成されました。*
 `;
     
@@ -932,17 +1280,479 @@ function downloadWeeklyReport() {
     URL.revokeObjectURL(url);
 }
 
-// Helper functions
-function median(values) {
-    if (values.length === 0) return 0;
-    const sorted = values.slice().sort((a, b) => a - b);
-    const mid = Math.floor(sorted.length / 2);
-    return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+// Calculate new metrics: PR Review Time, Review Depth, PR Size
+function calculateNewMetrics(prs) {
+    const metrics = {
+        // PR Review Time - PR作成から最初のレビューまでの時間
+        avgReviewTime: 0,
+        reviewTimeData: [],
+        
+        // Review Depth - レビューの深さ
+        avgReviewDepth: 0,
+        totalReviewThreads: 0,
+        reviewDecisionStats: { approved: 0, changes_requested: 0, commented: 0 },
+        
+        // PR Size - PRの大きさ
+        avgPRSize: 0,
+        avgChangedFiles: 0,
+        totalAdditions: 0,
+        totalDeletions: 0
+    };
+    
+    if (prs.length === 0) return metrics;
+    
+    let prsWithReviews = 0;
+    let totalReviewTime = 0;
+    let totalReviewDepth = 0;
+    let totalChangedFiles = 0;
+    let totalAdditions = 0;
+    let totalDeletions = 0;
+    
+    prs.forEach(pr => {
+        // PR Review Time - review_details を使用
+        if (pr.review_details && pr.review_details.length > 0) {
+            const prCreated = new Date(pr.createdAt);
+            const firstReview = pr.review_details
+                .map(review => new Date(review.createdAt))
+                .sort((a, b) => a - b)[0]; // 最初のレビュー
+            
+            if (firstReview) {
+                const reviewTimeHours = (firstReview - prCreated) / (1000 * 60 * 60); // hours
+                metrics.reviewTimeData.push(reviewTimeHours);
+                totalReviewTime += reviewTimeHours;
+                prsWithReviews++;
+            }
+        }
+        
+        // Review Depth - review_threads と comments_count を使用
+        const reviewThreadCount = pr.review_threads || 0;
+        const commentCount = pr.comments_count || 0;
+        const totalReviewActivity = reviewThreadCount + commentCount;
+        
+        totalReviewDepth += totalReviewActivity;
+        metrics.totalReviewThreads += reviewThreadCount;
+        
+        // Review Decisions - review_details の state を確認
+        if (pr.review_details && pr.review_details.length > 0) {
+            pr.review_details.forEach(review => {
+                const state = review.state ? review.state.toLowerCase() : '';
+                if (state === 'approved') metrics.reviewDecisionStats.approved++;
+                else if (state === 'changes_requested') metrics.reviewDecisionStats.changes_requested++;
+                else if (state === 'commented') metrics.reviewDecisionStats.commented++;
+            });
+        }
+        
+        // PR Size
+        const additions = pr.additions || 0;
+        const deletions = pr.deletions || 0;
+        const changedFiles = pr.changedFiles || 0;
+        
+        totalAdditions += additions;
+        totalDeletions += deletions;
+        totalChangedFiles += changedFiles;
+    });
+    
+    // Calculate averages
+    metrics.avgReviewTime = prsWithReviews > 0 ? totalReviewTime / prsWithReviews : 0;
+    metrics.avgReviewDepth = prs.length > 0 ? totalReviewDepth / prs.length : 0;
+    metrics.avgPRSize = prs.length > 0 ? (totalAdditions + totalDeletions) / prs.length : 0;
+    metrics.avgChangedFiles = prs.length > 0 ? totalChangedFiles / prs.length : 0;
+    metrics.totalAdditions = totalAdditions;
+    metrics.totalDeletions = totalDeletions;
+    
+    // Debug logging
+    console.log('[Statistics] New Metrics Calculated:', {
+        totalPRs: prs.length,
+        prsWithReviews,
+        avgReviewTime: metrics.avgReviewTime.toFixed(2) + ' hours',
+        avgReviewDepth: metrics.avgReviewDepth.toFixed(2),
+        avgPRSize: metrics.avgPRSize.toFixed(0) + ' lines',
+        reviewDecisions: metrics.reviewDecisionStats
+    });
+    
+    return metrics;
+}
+
+// Load Four Keys data for correlation analysis
+async function loadFourKeysDataForStatistics() {
+    try {
+        const base = (typeof CONFIG !== 'undefined' && CONFIG.dataSource && CONFIG.dataSource.basePath) ? CONFIG.dataSource.basePath : './data/';
+        const prsUrl = `${base.replace(/\/?$/,'/')}prs.json`;
+
+        const prsResponse = await fetch(prsUrl);
+        if (prsResponse.ok) {
+            const prsData = await prsResponse.json();
+            console.log('PR data loaded for statistics correlation:', prsData.length, 'PRs');
+
+            // Calculate Four Keys metrics from PR data
+            if (typeof calculateFourKeysFromPRs === 'function') {
+                fourKeysData = calculateFourKeysFromPRs(prsData);
+                console.log('Four Keys metrics calculated:', fourKeysData.metrics);
+            } else {
+                console.warn('calculateFourKeysFromPRs function not available');
+            }
+        }
+    } catch (error) {
+        console.warn('Could not load PR data for statistics:', error);
+    }
+}
+
+// Display Four Keys metrics in statistics page
+function displayFourKeysMetricsInStatistics() {
+    const container = document.getElementById('fourKeysMetricsContainer');
+    if (!container || !fourKeysData || !fourKeysData.metrics) {
+        if (container) {
+            container.innerHTML = '<div class="info-message">Four Keysデータが利用できません</div>';
+        }
+        return;
+    }
+
+    const metrics = fourKeysData.metrics;
+
+    container.innerHTML = `
+        <h3>🔑 Four Keys メトリクス</h3>
+        <div class="four-keys-grid">
+            <div class="metric-card modern-card">
+                <div class="metric-card-header">
+                    <span class="metric-icon">🚀</span>
+                    <h4>デプロイ頻度</h4>
+                </div>
+                <div class="metric-card-body">
+                    <div class="metric-value-container">
+                        <p class="metric-value">${metrics.deploymentFrequency.value.toFixed(1)}</p>
+                        <p class="metric-unit">回/週</p>
+                    </div>
+                    <div class="metric-badge" style="background: ${metrics.deploymentFrequency.classification.color}22; color: ${metrics.deploymentFrequency.classification.color};">
+                        DORA Level: ${metrics.deploymentFrequency.classification.level}
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card modern-card">
+                <div class="metric-card-header">
+                    <span class="metric-icon">⏱️</span>
+                    <h4>リードタイム</h4>
+                </div>
+                <div class="metric-card-body">
+                    <div class="metric-value-container">
+                        <p class="metric-value">${metrics.leadTime.value.toFixed(1)}</p>
+                        <p class="metric-unit">日</p>
+                    </div>
+                    <div class="metric-badge" style="background: ${metrics.leadTime.classification.color}22; color: ${metrics.leadTime.classification.color};">
+                        DORA Level: ${metrics.leadTime.classification.level}
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card modern-card">
+                <div class="metric-card-header">
+                    <span class="metric-icon">❌</span>
+                    <h4>変更失敗率</h4>
+                </div>
+                <div class="metric-card-body">
+                    <div class="metric-value-container">
+                        <p class="metric-value">${metrics.changeFailureRate.value.toFixed(1)}</p>
+                        <p class="metric-unit">%</p>
+                    </div>
+                    <div class="metric-badge" style="background: ${metrics.changeFailureRate.classification.color}22; color: ${metrics.changeFailureRate.classification.color};">
+                        DORA Level: ${metrics.changeFailureRate.classification.level}
+                    </div>
+                </div>
+            </div>
+
+            <div class="metric-card modern-card">
+                <div class="metric-card-header">
+                    <span class="metric-icon">🔧</span>
+                    <h4>MTTR</h4>
+                </div>
+                <div class="metric-card-body">
+                    <div class="metric-value-container">
+                        <p class="metric-value">${metrics.mttr.value.toFixed(1)}</p>
+                        <p class="metric-unit">時間</p>
+                    </div>
+                    <div class="metric-badge" style="background: ${metrics.mttr.classification.color}22; color: ${metrics.mttr.classification.color};">
+                        DORA Level: ${metrics.mttr.classification.level}
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Analyze correlation between new metrics and Four Keys
+function analyzeMetricsCorrelation(newMetrics, fourKeysMetrics) {
+    if (!fourKeysMetrics || !newMetrics) return null;
+
+    const correlations = {
+        reviewTimeVsLeadTime: {
+            correlation: newMetrics.reviewTimeData && newMetrics.reviewTimeData.length > 0 ?
+                calculateCorrelation(newMetrics.reviewTimeData, Array(newMetrics.reviewTimeData.length).fill(fourKeysMetrics.leadTime.value)) : 0,
+            insight: '',
+            recommendation: ''
+        },
+        reviewDepthVsFailureRate: {
+            correlation: calculateCorrelation([newMetrics.avgReviewDepth], [fourKeysMetrics.changeFailureRate.value]),
+            insight: '',
+            recommendation: ''
+        },
+        prSizeVsDeploymentFrequency: {
+            correlation: calculateCorrelation([newMetrics.avgPRSize], [fourKeysMetrics.deploymentFrequency.value]),
+            insight: '',
+            recommendation: ''
+        }
+    };
+
+    // Generate insights based on correlations
+    if (Math.abs(correlations.reviewTimeVsLeadTime.correlation) > 0.3) {
+        correlations.reviewTimeVsLeadTime.insight = 'レビュー時間が長いPRは全体のリードタイムを延ばす傾向があります';
+        correlations.reviewTimeVsLeadTime.recommendation = 'レビュー時間を短縮するためのガイドラインを作成することを検討してください';
+    }
+
+    if (correlations.reviewDepthVsFailureRate.correlation < -0.2) {
+        correlations.reviewDepthVsFailureRate.insight = 'レビューが深いPRは失敗率が低い傾向があります';
+        correlations.reviewDepthVsFailureRate.recommendation = 'コードレビューの品質を維持しつつ効率化を図るバランスが重要です';
+    }
+
+    if (correlations.prSizeVsDeploymentFrequency.correlation < -0.2) {
+        correlations.prSizeVsDeploymentFrequency.insight = '大きなPRはデプロイ頻度を低下させる可能性があります';
+        correlations.prSizeVsDeploymentFrequency.recommendation = 'PRを小さく保つことでデプロイ頻度を向上させることができます';
+    }
+
+    return correlations;
+}
+
+// Simple correlation calculation
+function calculateCorrelation(x, y) {
+    if (!x || !y || x.length !== y.length || x.length < 2) return 0;
+
+    // Check for valid numbers
+    if (x.some(val => isNaN(val)) || y.some(val => isNaN(val))) return 0;
+
+    const n = x.length;
+    const sumX = x.reduce((a, b) => a + b, 0);
+    const sumY = y.reduce((a, b) => a + b, 0);
+    // Compute sums required for Pearson correlation
+    const sumXY = x.reduce((s, xi, i) => s + xi * y[i], 0);
+    const sumX2 = x.reduce((s, xi) => s + xi * xi, 0);
+    const sumY2 = y.reduce((s, yi) => s + yi * yi, 0);
+
+    const numerator = n * sumXY - sumX * sumY;
+    const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+
+    if (denominator === 0 || isNaN(denominator)) return 0;
+
+    const correlation = numerator / denominator;
+
+    // Check for valid correlation value
+    return isNaN(correlation) ? 0 : Math.max(-1, Math.min(1, correlation));
+}
+
+// Display correlation insights
+function displayCorrelationInsights(correlations) {
+    const container = document.getElementById('correlationInsightsContainer');
+    if (!container || !correlations) {
+        if (container) {
+            container.innerHTML = '<div class="info-message">相関分析データが利用できません</div>';
+        }
+        return;
+    }
+
+    let insightsHtml = '<h3>🔍 指標相関分析</h3>';
+
+    Object.entries(correlations).forEach(([key, data]) => {
+        const title = key === 'reviewTimeVsLeadTime' ? 'レビュー時間 vs リードタイム' :
+                     key === 'reviewDepthVsFailureRate' ? 'レビュー深度 vs 失敗率' :
+                     'PRサイズ vs デプロイ頻度';
+
+        const correlationText = data.correlation === 0 ? 'データ不足' : data.correlation.toFixed(2);
+
+        insightsHtml += `
+            <div class="correlation-item">
+                <h4>${title}</h4>
+                <p><strong>相関係数:</strong> ${correlationText}</p>
+                ${data.insight ? `<p><strong>洞察:</strong> ${data.insight}</p>` : ''}
+                ${data.recommendation ? `<p><strong>推奨:</strong> ${data.recommendation}</p>` : ''}
+            </div>
+        `;
+    });
+
+    container.innerHTML = insightsHtml;
+}
+
+// Display author statistics
+function displayAuthorStats(currentPRs) {
+    const container = document.getElementById('authorStatsContainer');
+    if (!container) return;
+
+    if (!currentPRs || currentPRs.length === 0) {
+        container.innerHTML = '<div class="info-message">データがありません</div>';
+        return;
+    }
+
+    // Group by author
+    const authorStats = {};
+    currentPRs.forEach(pr => {
+        const author = pr.author || 'Unknown';
+        if (!authorStats[author]) {
+            authorStats[author] = {
+                prCount: 0,
+                mergedCount: 0
+            };
+        }
+        authorStats[author].prCount++;
+        if (pr.state === 'MERGED') {
+            authorStats[author].mergedCount++;
+        }
+    });
+
+    // Convert to array and calculate merge rate
+    const authorArray = Object.entries(authorStats).map(([author, stats]) => ({
+        author,
+        prCount: stats.prCount,
+        mergedCount: stats.mergedCount,
+        mergeRate: stats.prCount > 0 ? (stats.mergedCount / stats.prCount * 100).toFixed(1) : 0
+    }));
+
+    // Sort by PR count descending
+    authorArray.sort((a, b) => b.prCount - a.prCount);
+
+    // Create table HTML
+    let tableHtml = `
+        <div class="stats-table-wrapper">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>作成者</th>
+                        <th>PR数</th>
+                        <th>マージ数</th>
+                        <th>マージ率 (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    authorArray.forEach(row => {
+        tableHtml += `
+            <tr>
+                <td>${row.author}</td>
+                <td>${row.prCount}</td>
+                <td>${row.mergedCount}</td>
+                <td>${row.mergeRate}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = tableHtml;
+}
+
+// Display reviewer statistics
+function displayReviewerStats(currentPRs) {
+    const container = document.getElementById('reviewerStatsContainer');
+    if (!container) return;
+
+    if (!currentPRs || currentPRs.length === 0) {
+        container.innerHTML = '<div class="info-message">レビューデータがありません</div>';
+        return;
+    }
+
+    // Collect reviewer activities
+    const reviewerActivities = [];
+    currentPRs.forEach(pr => {
+        const reviewDetails = pr.review_details || [];
+        if (Array.isArray(reviewDetails)) {
+            reviewDetails.forEach(review => {
+                const reviewer = review.author;
+                if (reviewer) {
+                    reviewerActivities.push({
+                        reviewer,
+                        prNumber: pr.number,
+                        state: review.state
+                    });
+                }
+            });
+        }
+    });
+
+    if (reviewerActivities.length === 0) {
+        container.innerHTML = '<div class="info-message">レビューデータがありません</div>';
+        return;
+    }
+
+    // Group by reviewer
+    const reviewerStats = {};
+    reviewerActivities.forEach(activity => {
+        const reviewer = activity.reviewer;
+        if (!reviewerStats[reviewer]) {
+            reviewerStats[reviewer] = {
+                prsReviewed: new Set(),
+                totalReviews: 0
+            };
+        }
+        reviewerStats[reviewer].prsReviewed.add(activity.prNumber);
+        reviewerStats[reviewer].totalReviews++;
+    });
+
+    // Convert to array
+    const reviewerArray = Object.entries(reviewerStats).map(([reviewer, stats]) => ({
+        reviewer,
+        prsReviewedCount: stats.prsReviewed.size,
+        totalReviews: stats.totalReviews
+    }));
+
+    // Sort by PRs reviewed descending
+    reviewerArray.sort((a, b) => b.prsReviewedCount - a.prsReviewedCount);
+
+    // Create table HTML
+    let tableHtml = `
+        <div class="stats-table-wrapper">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>レビュワー</th>
+                        <th>レビューしたPR数</th>
+                        <th>総レビュー回数</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    reviewerArray.forEach(row => {
+        tableHtml += `
+            <tr>
+                <td>${row.reviewer}</td>
+                <td>${row.prsReviewedCount}</td>
+                <td>${row.totalReviews}</td>
+            </tr>
+        `;
+    });
+
+    tableHtml += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    container.innerHTML = tableHtml;
 }
 
 function formatDate(date) {
-    return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, '0')}/${String(date.getDate()).padStart(2, '0')}`;
+    // Handle both Date objects and ISO strings
+    const dateObj = date instanceof Date ? date : new Date(date);
+    if (isNaN(dateObj.getTime())) {
+        console.warn('[formatDate] Invalid date:', date);
+        return 'Invalid Date';
+    }
+    return `${dateObj.getFullYear()}/${String(dateObj.getMonth() + 1).padStart(2, '0')}/${String(dateObj.getDate()).padStart(2, '0')}`;
 }
+
+// Export functions for use by other modules
+window.initStatisticsPage = initStatisticsPage;
 
 // Initialize when DOM is loaded
 if (document.readyState === 'loading') {

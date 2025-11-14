@@ -155,6 +155,47 @@ def generate_analytics_json(output_dir: Path, prs: list):
     return analytics
 
 
+def generate_fourkeys_json(output_dir: Path, prs: list):
+    """Generate fourkeys.json placeholder - metrics are now calculated client-side"""
+    # Four Keys metrics are now calculated dynamically in JavaScript
+    # This file is kept for backward compatibility but contains minimal data
+    fourkeys = {
+        "generated": datetime.now(timezone.utc).isoformat(),
+        "note": "Four Keys metrics are calculated dynamically from prs.json on the client side",
+        "totalPRs": len(prs),
+        "mergedPRs": len([pr for pr in prs if pr.get('state') == 'MERGED']),
+        "metrics": {
+            "deploymentFrequency": {
+                "value": 0,
+                "unit": "per week",
+                "classification": {"level": "Calculating...", "color": "#6b7280"}
+            },
+            "leadTime": {
+                "value": 0,
+                "unit": "days",
+                "classification": {"level": "Calculating...", "color": "#6b7280"}
+            },
+            "changeFailureRate": {
+                "value": 0,
+                "unit": "percent",
+                "classification": {"level": "Calculating...", "color": "#6b7280"}
+            },
+            "mttr": {
+                "value": 0,
+                "unit": "hours",
+                "classification": {"level": "Calculating...", "color": "#6b7280"}
+            }
+        }
+    }
+    
+    output_file = output_dir / "fourkeys.json"
+    with open(output_file, 'w', encoding='utf-8') as f:
+        json.dump(fourkeys, f, indent=2, ensure_ascii=False)
+    
+    print(f"✓ Generated: {output_file} (placeholder - metrics calculated client-side)")
+    return fourkeys
+
+
 def classify_dora_level(value: float, metric: str) -> dict:
     """Classify DORA metric level based on value"""
     if metric == "deployment_frequency":  # per week
@@ -200,26 +241,12 @@ def classify_dora_level(value: float, metric: str) -> dict:
     return {"level": "Unknown", "color": "#6b7280"}
 
 
-def generate_fourkeys_json(output_dir: Path, prs: list):
-    """Generate fourkeys.json with Four Keys metrics"""
+def calculate_repo_fourkeys(repo_prs: list, failure_keywords: list) -> dict:
+    """Calculate Four Keys metrics for a single repository"""
     from datetime import timedelta
     
     # Filter merged PRs
-    merged_prs = [pr for pr in prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
-    
-    # Keywords to identify failure PRs
-    failure_keywords = ["revert", "hotfix", "urgent", "fix", "rollback", "emergency", "critical"]
-    
-    fourkeys_data = {
-        "generated": datetime.now(timezone.utc).isoformat(),
-        "metrics": {},
-        "detailedData": {
-            "deployments": [],
-            "leadTimes": [],
-            "failures": [],
-            "restoreTimes": []
-        }
-    }
+    merged_prs = [pr for pr in repo_prs if pr.get('state') == 'MERGED' and pr.get('mergedAt')]
     
     if not merged_prs:
         # Return empty metrics if no merged PRs
