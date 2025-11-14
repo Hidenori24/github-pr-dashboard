@@ -898,6 +898,48 @@ with tab1:
         st.plotly_chart(fig_timeline, use_container_width=True, key="timeline_chart")
 
         st.caption(f"💡 {len(tl_df)}件表示中 | hover で詳細確認")
+        
+        # PR一覧テーブル（詳細ページへのリンク付き）
+        st.markdown("---")
+        st.markdown("#### PR一覧")
+        
+        # 表示用にデータを整形
+        pr_table_df = tl_df.copy()
+        pr_table_df["PR番号"] = pr_table_df["number"]
+        pr_table_df["タイトル"] = pr_table_df["title_info"]
+        pr_table_df["状態"] = pr_table_df["state"]
+        pr_table_df["作成者"] = pr_table_df["author_info"]
+        pr_table_df["経過(h)"] = pr_table_df["age_hours"].round(1)
+        pr_table_df["営業日"] = pr_table_df["business_days"]
+        pr_table_df["コメント"] = pr_table_df["comments_count"]
+        
+        # テーブル表示
+        display_columns = ["PR番号", "タイトル", "状態", "作成者", "経過(h)", "営業日", "コメント"]
+        st.dataframe(
+            pr_table_df[display_columns],
+            use_container_width=True,
+            height=300,
+            hide_index=True
+        )
+        
+        # 詳細ページへのリンクボタン（セレクトボックス + ボタン）
+        col_select, col_btn = st.columns([3, 1])
+        with col_select:
+            selected_pr_number = st.selectbox(
+                "詳細を見るPRを選択",
+                options=pr_table_df["PR番号"].tolist(),
+                format_func=lambda x: f"#{x}: {pr_table_df[pr_table_df['PR番号']==x]['タイトル'].iloc[0][:50]}",
+                key="pr_select_for_detail"
+            )
+        with col_btn:
+            st.markdown("<br>", unsafe_allow_html=True)  # スペース調整
+            if st.button("📄 詳細を見る", use_container_width=True):
+                st.query_params.update({
+                    "owner": owner,
+                    "repo": repo,
+                    "number": str(selected_pr_number)
+                })
+                st.switch_page("pages/3_pr_detail.py")
 
 with tab2:
     st.markdown("### ファイル変更")
@@ -1088,6 +1130,44 @@ with tab2:
                 st.plotly_chart(fig_file, use_container_width=True, key="file_timeline_chart")
 
                 st.caption(f"💡 {len(gantt_df)}件のPR | hover で詳細確認")
+                
+                # PR一覧テーブル
+                st.markdown("---")
+                st.markdown("##### PR一覧")
+                
+                file_pr_table = gantt_df.copy()
+                file_pr_table["PR番号"] = file_pr_table["number"]
+                file_pr_table["タイトル"] = file_pr_table["title_info"]
+                file_pr_table["状態"] = file_pr_table["state"]
+                file_pr_table["作成者"] = file_pr_table["author_info"]
+                file_pr_table["経過(h)"] = file_pr_table["age_hours"].round(1)
+                
+                display_cols = ["PR番号", "タイトル", "状態", "作成者", "経過(h)"]
+                st.dataframe(
+                    file_pr_table[display_cols],
+                    use_container_width=True,
+                    height=200,
+                    hide_index=True
+                )
+                
+                # 詳細ページリンク
+                col_sel, col_btn = st.columns([3, 1])
+                with col_sel:
+                    sel_pr = st.selectbox(
+                        "詳細を見るPR",
+                        options=file_pr_table["PR番号"].tolist(),
+                        format_func=lambda x: f"#{x}: {file_pr_table[file_pr_table['PR番号']==x]['タイトル'].iloc[0][:40]}",
+                        key="file_pr_select"
+                    )
+                with col_btn:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    if st.button("📄 詳細", key="file_pr_detail_btn", use_container_width=True):
+                        st.query_params.update({
+                            "owner": owner,
+                            "repo": repo,
+                            "number": str(sel_pr)
+                        })
+                        st.switch_page("pages/3_pr_detail.py")
         else:
             st.info("上のセレクトボックスからディレクトリを選択してPRタイムラインを表示します")
         
@@ -1168,11 +1248,25 @@ with tab3:
                         
                         role_badge = "✍️ 作成者" if role == "author" else "レビュアー"
                         
-                        st.markdown(f"""
+                        # 詳細ページへのリンクを作成
+                        detail_link = f"pages/3_pr_detail.py?owner={owner}&repo={repo}&number={pr_number}"
+                        
+                        col_pr_info, col_pr_btn = st.columns([5, 1])
+                        with col_pr_info:
+                            st.markdown(f"""
 **[#{pr_number}]({pr_url})** {pr_title[:60]}{'...' if len(pr_title) > 60 else ''}{age_mark}
 - 役割: {role_badge} | 理由: {action_info['reason']} | 経過: {age_days:.1f}日
 - 作成者: {author}
-                        """)
+                            """)
+                        with col_pr_btn:
+                            if st.button("詳細", key=f"detail_btn_{pr_number}_{user}"):
+                                st.query_params.update({
+                                    "owner": owner,
+                                    "repo": repo,
+                                    "number": str(pr_number)
+                                })
+                                st.switch_page("pages/3_pr_detail.py")
+                        
                         st.divider()
 
 

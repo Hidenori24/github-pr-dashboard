@@ -2,7 +2,6 @@
 from typing import List, Dict, Set
 from datetime import datetime
 
-
 def determine_action_owner(pr: dict) -> Dict:
     """
     PRの現在のアクション担当者を判定

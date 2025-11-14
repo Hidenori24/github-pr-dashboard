@@ -5,7 +5,6 @@ import plotly.graph_objects as go
 import plotly.express as px
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
-from pathlib import Path
 import json
 
 import config
@@ -112,10 +111,213 @@ else:
     )
 
 JST = ZoneInfo("Asia/Tokyo")
-HISTORICAL_DATA_PATH = Path(__file__).parent.parent.parent / "Dashboard_pages" / "data" / "historical_statistics.json"
 
 
-# NOTE: This function is defined for potential future use and may also be imported by other modules.
+def calculate_four_keys_from_prs(df: pd.DataFrame) -> dict:
+    """PRデータからFour Keysメトリクスを計算"""
+    four_keys = {
+        'deployment_frequency': 0.0,  # デプロイ頻度（1日あたりのデプロイ数）
+        'lead_time_for_changes': 0.0,  # 変更のリードタイム（日）
+        'change_failure_rate': 0.0,    # 変更失敗率（%）
+        'time_to_restore_service': 0.0  # サービス復旧時間（時間）
+    }
+    
+    if df.empty:
+        return four_keys
+    
+    # デプロイ頻度: マージされたPR数を期間で割る
+    merged_prs = df[df['state'] == 'MERGED']
+    if not merged_prs.empty:
+        # 期間を計算（日数）
+        date_range = (df['createdAt_dt'].max() - df['createdAt_dt'].min()).days
+        if date_range > 0:
+            four_keys['deployment_frequency'] = len(merged_prs) / date_range
+    
+    # リードタイム: 作成からマージまでの平均時間
+    if not merged_prs.empty:
+        merged_copy = merged_prs.copy()
+        merged_copy['lead_time'] = (
+            pd.to_datetime(merged_copy['mergedAt'], format="ISO8601", utc=True) - 
+            pd.to_datetime(merged_copy['createdAt'], format="ISO8601", utc=True)
+        ).dt.total_seconds() / 3600 / 24  # 日単位
+        four_keys['lead_time_for_changes'] = merged_copy['lead_time'].median()
+    
+    # 変更失敗率: クローズされたPRの割合
+    total_closed_prs = len(df[df['state'].isin(['CLOSED', 'MERGED'])])
+    failed_prs = len(df[df['state'] == 'CLOSED'])
+    if total_closed_prs > 0:
+        four_keys['change_failure_rate'] = (failed_prs / total_closed_prs) * 100
+    
+    # MTTR: 失敗したPRの平均修正時間（簡易版）
+    # ここではクローズされたPRの平均滞留時間をMTTRとして使用
+    closed_prs = df[df['state'] == 'CLOSED']
+    if not closed_prs.empty:
+        closed_copy = closed_prs.copy()
+        closed_copy['resolution_time'] = (
+            pd.to_datetime(closed_copy['closedAt'], format="ISO8601", utc=True) - 
+            pd.to_datetime(closed_copy['createdAt'], format="ISO8601", utc=True)
+        ).dt.total_seconds() / 3600  # 時間単位
+        four_keys['time_to_restore_service'] = closed_copy['resolution_time'].median()
+    
+    return four_keys
+
+
+def get_dora_level(metric_name: str, value: float) -> str:
+    """DORAレベルを判定"""
+    if metric_name == 'deployment_frequency':
+        if value >= 1: return 'Elite'
+        elif value >= 0.077: return 'High'
+        elif value >= 0.013: return 'Medium'
+        else: return 'Low'
+    elif metric_name == 'lead_time_for_changes':
+        if value <= 1: return 'Elite'
+        elif value <= 7: return 'High'
+        elif value <= 30: return 'Medium'
+        else: return 'Low'
+    elif metric_name == 'change_failure_rate':
+        if value <= 5: return 'Elite'
+        elif value <= 15: return 'High'
+        elif value <= 30: return 'Medium'
+        else: return 'Low'
+    elif metric_name == 'time_to_restore_service':
+        if value <= 60: return 'Elite'
+        elif value <= 7*24: return 'High'
+        elif value <= 30*24: return 'Medium'
+        else: return 'Low'
+    return 'Unknown'
+
+
+def calculate_correlation(x_data: list, y_data: list) -> float:
+    """相関係数を計算（ピアソンの積率相関係数）"""
+    if len(x_data) != len(y_data) or len(x_data) < 2:
+        return 0.0
+    
+    # NaNやNoneを除去
+    valid_pairs = [(x, y) for x, y in zip(x_data, y_data) if x is not None and y is not None and not (pd.isna(x) or pd.isna(y))]
+    if len(valid_pairs) < 2:
+        return 0.0
+    
+    x_vals, y_vals = zip(*valid_pairs)
+    
+    # 平均を計算
+    x_mean = sum(x_vals) / len(x_vals)
+    y_mean = sum(y_vals) / len(y_vals)
+    
+    # 共分散と標準偏差を計算
+    numerator = sum((x - x_mean) * (y - y_mean) for x, y in zip(x_vals, y_vals))
+    x_std = (sum((x - x_mean) ** 2 for x in x_vals) / len(x_vals)) ** 0.5
+    y_std = (sum((y - y_mean) ** 2 for y in y_vals) / len(y_vals)) ** 0.5
+    
+    if x_std == 0 or y_std == 0:
+        return 0.0
+    
+    correlation = numerator / (len(x_vals) * x_std * y_std)
+    
+    # 値の範囲を-1から1に制限
+    return max(-1.0, min(1.0, correlation))
+
+
+def analyze_metrics_correlation(df: pd.DataFrame, four_keys: dict) -> dict:
+    """メトリクス間の相関分析"""
+    correlations = {}
+    
+    if df.empty:
+        return correlations
+    
+    # PRサイズ（変更ファイル数）
+    pr_sizes = []
+    for _, row in df.iterrows():
+        files_changed = row.get('files_count', 0)
+        pr_sizes.append(files_changed)
+    
+    # レビュー時間（作成から最初のレビューまでの時間）
+    review_times = []
+    for _, row in df.iterrows():
+        if row.get('first_review_at'):
+            try:
+                created_at = pd.to_datetime(row['createdAt'], format="ISO8601", utc=True)
+                first_review_at = pd.to_datetime(row['first_review_at'], format="ISO8601", utc=True)
+                review_time_days = (first_review_at - created_at).total_seconds() / 86400
+                review_times.append(review_time_days)
+            except:
+                review_times.append(None)
+        else:
+            review_times.append(None)
+    
+    # Four Keysメトリクスとの相関を分析
+    metrics_to_analyze = {
+        'pr_size': pr_sizes,
+        'review_time': review_times
+    }
+    
+    for metric_name, metric_data in metrics_to_analyze.items():
+        if metric_name == 'review_time':
+            # レビュー時間は配列なので、各Four Keysメトリクスと比較
+            for fk_name, fk_value in four_keys.items():
+                if fk_value is not None and not pd.isna(fk_value):
+                    # レビュー時間がNoneでないペアのみを使用
+                    valid_review_times = [rt for rt in metric_data if rt is not None and not pd.isna(rt)]
+                    if len(valid_review_times) >= 2:
+                        # Four Keys値は単一値なので、同じ値のリストを作成
+                        fk_values = [fk_value] * len(valid_review_times)
+                        corr = calculate_correlation(valid_review_times, fk_values)
+                        correlations[f'{metric_name}_vs_{fk_name}'] = corr
+        else:
+            # PRサイズなどの場合は、各PRの値とFour Keysメトリクスを比較
+            for fk_name, fk_value in four_keys.items():
+                if fk_value is not None and not pd.isna(fk_value) and len(metric_data) >= 2:
+                    # Four Keys値は単一値なので、同じ値のリストを作成
+                    fk_values = [fk_value] * len(metric_data)
+                    corr = calculate_correlation(metric_data, fk_values)
+                    correlations[f'{metric_name}_vs_{fk_name}'] = corr
+    
+    return correlations
+
+
+def display_correlation_insights(correlations: dict) -> list:
+    """相関分析の洞察を表示"""
+    insights = []
+    
+    correlation_labels = {
+        'pr_size_vs_deployment_frequency': 'PRサイズ vs デプロイ頻度',
+        'pr_size_vs_lead_time_for_changes': 'PRサイズ vs リードタイム',
+        'pr_size_vs_change_failure_rate': 'PRサイズ vs 変更失敗率',
+        'pr_size_vs_time_to_restore_service': 'PRサイズ vs MTTR',
+        'review_time_vs_deployment_frequency': 'レビュー時間 vs デプロイ頻度',
+        'review_time_vs_lead_time_for_changes': 'レビュー時間 vs リードタイム',
+        'review_time_vs_change_failure_rate': 'レビュー時間 vs 変更失敗率',
+        'review_time_vs_time_to_restore_service': 'レビュー時間 vs MTTR'
+    }
+    
+    for key, correlation in correlations.items():
+        if abs(correlation) < 0.2:  # 弱い相関は無視
+            continue
+            
+        label = correlation_labels.get(key, key)
+        
+        if correlation == 0:
+            insights.append({
+                'type': 'info',
+                'title': f'{label}: データ不足',
+                'message': '相関分析を行うための十分なデータがありません。'
+            })
+        elif abs(correlation) >= 0.7:
+            strength = "強い" if abs(correlation) >= 0.8 else "中程度の"
+            direction = "正" if correlation > 0 else "負"
+            insights.append({
+                'type': 'warning' if correlation < 0 else 'success',
+                'title': f'{label}: {strength}{direction}の相関',
+                'message': f'相関係数: {correlation:.2f} - {"改善の機会があります" if correlation < 0 else "良好な関連性があります"}'
+            })
+        elif abs(correlation) >= 0.5:
+            direction = "正" if correlation > 0 else "負"
+            insights.append({
+                'type': 'info',
+                'title': f'{label}: 弱い{direction}の相関',
+                'message': f'相関係数: {correlation:.2f} - さらなる分析が必要です'
+            })
+    
+    return insights
 def calculate_business_hours(start_dt: datetime, end_dt: datetime) -> float:
     """営業日（平日のみ）で経過時間を計算（時間単位）"""
     if pd.isna(start_dt) or pd.isna(end_dt):
@@ -362,81 +564,12 @@ with st.sidebar:
     
     st.divider()
     
-    st.header("表示モード")
-    view_mode = st.selectbox(
-        "モードを選択",
-        ["現在の期間", "過去週単位", "過去月単位", "過去年単位"],
+    st.header("レポート期間")
+    report_period = st.selectbox(
+        "期間を選択",
+        ["今週", "先週", "今月", "先月", "過去30日", "過去90日"],
         index=0
     )
-    
-    st.divider()
-    
-    st.header("レポート期間")
-    
-    if view_mode == "現在の期間":
-        report_period = st.selectbox(
-            "期間を選択",
-            ["今週", "先週", "今月", "先月", "過去30日", "過去90日"],
-            index=0
-        )
-    elif view_mode == "過去週単位":
-        # Load historical data if available
-        if HISTORICAL_DATA_PATH.exists():
-            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
-                historical_data = json.load(f)
-            
-            weekly_options = []
-            for i, week in enumerate(historical_data['weekly']):
-                week_start = pd.to_datetime(week['weekStart']).astimezone(JST)
-                week_end = pd.to_datetime(week['weekEnd']).astimezone(JST)
-                weekly_options.append(f"{week_start.strftime('%Y/%m/%d')} - {week_end.strftime('%Y/%m/%d')} (週{len(historical_data['weekly']) - i})")
-            
-            selected_week_idx = st.selectbox(
-                "週を選択",
-                range(len(weekly_options)),
-                format_func=lambda i: weekly_options[i],
-                index=len(weekly_options) - 1
-            )
-        else:
-            st.warning("過去データが利用できません。データを生成してください。")
-            report_period = "今週"
-    elif view_mode == "過去月単位":
-        # Load historical data if available
-        if HISTORICAL_DATA_PATH.exists():
-            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
-                historical_data = json.load(f)
-            
-            monthly_options = []
-            for month in historical_data['monthly']:
-                month_start = pd.to_datetime(month['monthStart']).astimezone(JST)
-                monthly_options.append(f"{month_start.strftime('%Y年%m月')}")
-            
-            selected_month_idx = st.selectbox(
-                "月を選択",
-                range(len(monthly_options)),
-                format_func=lambda i: monthly_options[i],
-                index=len(monthly_options) - 1
-            )
-        else:
-            st.warning("過去データが利用できません。データを生成してください。")
-            report_period = "今月"
-    elif view_mode == "過去年単位":
-        # Load historical data if available
-        if HISTORICAL_DATA_PATH.exists():
-            with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
-                historical_data = json.load(f)
-            
-            yearly_options = [f"{year['year']}年" for year in historical_data['yearly']]
-            
-            selected_year_idx = st.selectbox(
-                "年を選択",
-                range(len(yearly_options)),
-                format_func=lambda i: yearly_options[i],
-                index=len(yearly_options) - 1
-            )
-        else:
-            st.warning("過去データが利用できません。データを生成してください。")
-            report_period = "今月"
     
     st.divider()
     
@@ -458,175 +591,90 @@ df_all["createdAt_dt"] = pd.to_datetime(df_all["createdAt"], format="ISO8601", u
 df_all["closedAt_dt"] = pd.to_datetime(df_all["closedAt"], format="ISO8601", utc=True, errors='coerce')
 df_all["mergedAt_dt"] = pd.to_datetime(df_all["mergedAt"], format="ISO8601", utc=True, errors='coerce')
 
-# Historical data handling
-if view_mode != "現在の期間":
-    if HISTORICAL_DATA_PATH.exists():
-        with open(HISTORICAL_DATA_PATH, 'r', encoding='utf-8') as f:
-            historical_data_loaded = json.load(f)
-        
-        # Get selected period data
-        if view_mode == "過去週単位":
-            selected_data = historical_data_loaded['weekly'][selected_week_idx]
-            week_start = pd.to_datetime(selected_data['weekStart']).astimezone(JST)
-            week_end = pd.to_datetime(selected_data['weekEnd']).astimezone(JST)
-            period_days = 7
-            
-            # Create stats from historical data
-            stats = {
-                'total_prs': selected_data['totalPRs'],
-                'open_prs': selected_data['openPRs'],
-                'merged_prs': selected_data['mergedPRs'],
-                'closed_prs': selected_data['closedPRs'],
-                'total_change': selected_data['totalChange'],
-                'total_change_pct': selected_data['totalChangePct'],
-                'avg_lead_time': selected_data['avgLeadTime'],
-                'lead_time_change': selected_data['leadTimeChange'],
-                'active_authors': selected_data['activeAuthors'],
-                'total_reviews': selected_data['totalReviews'],
-                'total_comments': selected_data['totalComments'],
-                'avg_reviews_per_pr': selected_data['avgReviewsPerPR'],
-                'avg_comments_per_pr': selected_data['avgCommentsPerPR']
-            }
-            
-        elif view_mode == "過去月単位":
-            selected_data = historical_data_loaded['monthly'][selected_month_idx]
-            week_start = pd.to_datetime(selected_data['monthStart']).astimezone(JST)
-            week_end = pd.to_datetime(selected_data['monthEnd']).astimezone(JST)
-            period_days = (week_end - week_start).days
-            
-            # Note: Some metrics are set to 0 for monthly view as detailed review data
-            # is not stored in monthly aggregations to keep file size manageable
-            stats = {
-                'total_prs': selected_data['totalPRs'],
-                'open_prs': selected_data['openPRs'],
-                'merged_prs': selected_data['mergedPRs'],
-                'closed_prs': selected_data['closedPRs'],
-                'total_change': selected_data['totalChange'],
-                'total_change_pct': 0,  # Comparison not available for monthly view
-                'avg_lead_time': selected_data['avgLeadTime'],
-                'lead_time_change': 0,  # Comparison not available for monthly view
-                'active_authors': selected_data['activeAuthors'],
-                'total_reviews': 0,  # Review details not stored in monthly aggregations
-                'total_comments': 0,  # Comment details not stored in monthly aggregations
-                'avg_reviews_per_pr': 0,  # Review details not stored in monthly aggregations
-                'avg_comments_per_pr': 0  # Comment details not stored in monthly aggregations
-            }
-            
-        else:  # 過去年単位
-            selected_data = historical_data_loaded['yearly'][selected_year_idx]
-            week_start = pd.to_datetime(selected_data['yearStart']).astimezone(JST)
-            week_end = pd.to_datetime(selected_data['yearEnd']).astimezone(JST)
-            period_days = (week_end - week_start).days
-            
-            # Note: Some metrics are set to 0 for yearly view as detailed review data
-            # is not stored in yearly aggregations to keep file size manageable
-            stats = {
-                'total_prs': selected_data['totalPRs'],
-                'open_prs': selected_data['openPRs'],
-                'merged_prs': selected_data['mergedPRs'],
-                'closed_prs': selected_data['closedPRs'],
-                'total_change': 0,  # Comparison not available for yearly view
-                'total_change_pct': 0,  # Comparison not available for yearly view
-                'avg_lead_time': selected_data['avgLeadTime'],
-                'lead_time_change': 0,  # Comparison not available for yearly view
-                'active_authors': selected_data['activeAuthors'],
-                'total_reviews': 0,  # Review details not stored in yearly aggregations
-                'total_comments': 0,  # Comment details not stored in yearly aggregations
-                'avg_reviews_per_pr': 0,  # Review details not stored in yearly aggregations
-                'avg_comments_per_pr': 0  # Comment details not stored in yearly aggregations
-            }
-        
-        # Empty dataframes for historical mode
-        current_week_df = pd.DataFrame()
-        previous_week_df = pd.DataFrame()
-        
-        # Skip to display section
-        insights = []
-        recommendations = []
+# Four Keysメトリクスを計算
+four_keys = calculate_four_keys_from_prs(df_all)
+
+# 相関分析
+correlations = analyze_metrics_correlation(df_all, four_keys)
+correlation_insights = display_correlation_insights(correlations)
+
+# 期間設定
+now = datetime.now(timezone.utc)
+if report_period == "今週":
+    # 今週の月曜日から今日まで
+    week_start = now - timedelta(days=now.weekday())
+    week_end = now
+    prev_week_start = week_start - timedelta(days=7)
+    prev_week_end = week_start
+    period_days = 7
+elif report_period == "先週":
+    # 先週の月曜日から日曜日まで
+    week_start = now - timedelta(days=now.weekday() + 7)
+    week_end = week_start + timedelta(days=7)
+    prev_week_start = week_start - timedelta(days=7)
+    prev_week_end = week_start
+    period_days = 7
+elif report_period == "今月":
+    # 今月の1日から今日まで
+    week_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    week_end = now
+    # 前月の同じ期間
+    if week_start.month == 1:
+        prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
     else:
-        st.error("過去データが見つかりません。")
-        st.stop()
-else:
-    # 期間設定 (現在の期間モード)
-    now = datetime.now(timezone.utc)
-    if report_period == "今週":
-        # 今週の月曜日から今日まで
-        week_start = now - timedelta(days=now.weekday())
-        week_end = now
-        prev_week_start = week_start - timedelta(days=7)
-        prev_week_end = week_start
-        period_days = 7
-    elif report_period == "先週":
-        # 先週の月曜日から日曜日まで
-        week_start = now - timedelta(days=now.weekday() + 7)
-        week_end = week_start + timedelta(days=7)
-        prev_week_start = week_start - timedelta(days=7)
-        prev_week_end = week_start
-        period_days = 7
-    elif report_period == "今月":
-        # 今月の1日から今日まで
-        week_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        week_end = now
-        # 前月の同じ期間
-        if week_start.month == 1:
-            prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
-        else:
-            prev_week_start = week_start.replace(month=week_start.month - 1)
-        prev_week_end = prev_week_start + (week_end - week_start)
-        period_days = (week_end - week_start).days
-    elif report_period == "先月":
-        # 先月の1日から末日まで
-        first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if first_day.month == 1:
-            week_start = first_day.replace(year=first_day.year - 1, month=12)
-        else:
-            week_start = first_day.replace(month=first_day.month - 1)
-        week_end = first_day
-        # 前々月
-        if week_start.month == 1:
-            prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
-        else:
-            prev_week_start = week_start.replace(month=week_start.month - 1)
-        prev_week_end = week_start
-        period_days = (week_end - week_start).days
-    elif report_period == "過去30日":
-        week_start = now - timedelta(days=30)
-        week_end = now
-        prev_week_start = week_start - timedelta(days=30)
-        prev_week_end = week_start
-        period_days = 30
-    else:  # 過去90日
-        week_start = now - timedelta(days=90)
-        week_end = now
-        prev_week_start = week_start - timedelta(days=90)
-        prev_week_end = week_start
-        period_days = 90
-    
-    # 期間でフィルタ
-    current_week_df = df_all[
-        (df_all['createdAt_dt'] >= week_start) & 
-        (df_all['createdAt_dt'] < week_end)
-    ].copy()
-    
-    previous_week_df = df_all[
-        (df_all['createdAt_dt'] >= prev_week_start) & 
-        (df_all['createdAt_dt'] < prev_week_end)
-    ].copy()
-    
-    # 統計生成
-    stats = generate_weekly_statistics(df_all, current_week_df, previous_week_df)
-    insights = generate_insights(stats, df_all)
-    recommendations = generate_recommendations(stats, insights)
+        prev_week_start = week_start.replace(month=week_start.month - 1)
+    prev_week_end = prev_week_start + (week_end - week_start)
+    period_days = (week_end - week_start).days
+elif report_period == "先月":
+    # 先月の1日から末日まで
+    first_day = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if first_day.month == 1:
+        week_start = first_day.replace(year=first_day.year - 1, month=12)
+    else:
+        week_start = first_day.replace(month=first_day.month - 1)
+    week_end = first_day
+    # 前々月
+    if week_start.month == 1:
+        prev_week_start = week_start.replace(year=week_start.year - 1, month=12)
+    else:
+        prev_week_start = week_start.replace(month=week_start.month - 1)
+    prev_week_end = week_start
+    period_days = (week_end - week_start).days
+elif report_period == "過去30日":
+    week_start = now - timedelta(days=30)
+    week_end = now
+    prev_week_start = week_start - timedelta(days=30)
+    prev_week_end = week_start
+    period_days = 30
+else:  # 過去90日
+    week_start = now - timedelta(days=90)
+    week_end = now
+    prev_week_start = week_start - timedelta(days=90)
+    prev_week_end = week_start
+    period_days = 90
+
+# 期間でフィルタ
+current_week_df = df_all[
+    (df_all['createdAt_dt'] >= week_start) & 
+    (df_all['createdAt_dt'] < week_end)
+].copy()
+
+previous_week_df = df_all[
+    (df_all['createdAt_dt'] >= prev_week_start) & 
+    (df_all['createdAt_dt'] < prev_week_end)
+].copy()
+
+# 統計生成
+stats = generate_weekly_statistics(df_all, current_week_df, previous_week_df)
+insights = generate_insights(stats, df_all)
+recommendations = generate_recommendations(stats, insights)
 
 # レポート表示
 st.markdown("---")
 
 # サマリーカード
-if view_mode == "現在の期間":
-    st.markdown(f"### 📅 {report_period}のサマリー")
-else:
-    st.markdown(f"### 📅 選択期間のサマリー")
-st.caption(f"{week_start.strftime('%Y/%m/%d')} - {week_end.strftime('%Y/%m/%d')}")
+st.markdown(f"### 📅 {report_period}のサマリー")
+st.caption(f"{week_start.astimezone(JST).strftime('%Y/%m/%d')} - {week_end.astimezone(JST).strftime('%Y/%m/%d')}")
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -664,8 +712,79 @@ with col4:
 
 st.markdown("---")
 
-# グラフ表示
-col_left, col_right = st.columns(2)
+# Four Keysメトリクス
+st.markdown("### 🚀 Four Keys 指標")
+
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    level = get_dora_level('deployment_frequency', four_keys['deployment_frequency'])
+    level_color = {'Elite': '🟢', 'High': '🟡', 'Medium': '🟠', 'Low': '🔴'}.get(level, '⚪')
+    st.metric(
+        "デプロイ頻度",
+        f"{four_keys['deployment_frequency']:.3f}回/日",
+        delta=f"{level_color} {level}"
+    )
+
+with col2:
+    level = get_dora_level('lead_time_for_changes', four_keys['lead_time_for_changes'])
+    level_color = {'Elite': '🟢', 'High': '🟡', 'Medium': '🟠', 'Low': '🔴'}.get(level, '⚪')
+    st.metric(
+        "リードタイム",
+        f"{four_keys['lead_time_for_changes']:.1f}日",
+        delta=f"{level_color} {level}"
+    )
+
+with col3:
+    level = get_dora_level('change_failure_rate', four_keys['change_failure_rate'])
+    level_color = {'Elite': '🟢', 'High': '🟡', 'Medium': '🟠', 'Low': '🔴'}.get(level, '⚪')
+    st.metric(
+        "変更失敗率",
+        f"{four_keys['change_failure_rate']:.1f}%",
+        delta=f"{level_color} {level}"
+    )
+
+with col4:
+    level = get_dora_level('time_to_restore_service', four_keys['time_to_restore_service'])
+    level_color = {'Elite': '🟢', 'High': '🟡', 'Medium': '🟠', 'Low': '🔴'}.get(level, '⚪')
+    st.metric(
+        "MTTR",
+        f"{four_keys['time_to_restore_service']:.1f}時間",
+        delta=f"{level_color} {level}"
+    )
+
+st.markdown("---")
+
+# 相関分析
+st.markdown("### 📊 相関分析")
+
+if correlation_insights:
+    for insight in correlation_insights:
+        if insight['type'] == 'success':
+            st.markdown(f"""
+            <div class="success-insight">
+                <h4 style="margin-top: 0;">✅ {insight['title']}</h4>
+                <p style="margin-bottom: 0;">{insight['message']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        elif insight['type'] == 'warning':
+            st.markdown(f"""
+            <div class="warning-insight">
+                <h4 style="margin-top: 0;">⚠️ {insight['title']}</h4>
+                <p style="margin-bottom: 0;">{insight['message']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="insight-card">
+                <h4 style="margin-top: 0;">ℹ️ {insight['title']}</h4>
+                <p style="margin-bottom: 0;">{insight['message']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+else:
+    st.info("相関分析の結果がありません。データが不足している可能性があります。")
+
+st.markdown("---")
 
 with col_left:
     st.markdown("#### PR状態の内訳")
@@ -705,96 +824,38 @@ with col_right:
 st.markdown("---")
 
 # トレンド分析
-if view_mode == "過去週単位":
-    st.markdown("### 📈 トレンド分析（過去12週間）")
+st.markdown("### 📈 トレンド分析（過去8週間）")
+
+# 過去8週間のデータを取得
+weeks_data = []
+for i in range(8, 0, -1):
+    week_s = now - timedelta(days=now.weekday() + 7*i)
+    week_e = week_s + timedelta(days=7)
     
-    # Use historical data for trends
-    display_count = min(12, len(historical_data_loaded['weekly']))
-    start_idx = max(0, len(historical_data_loaded['weekly']) - display_count)
-    display_data = historical_data_loaded['weekly'][start_idx:]
+    week_df = df_all[
+        (df_all['createdAt_dt'] >= week_s) & 
+        (df_all['createdAt_dt'] < week_e)
+    ].copy()
     
-    weeks_data = []
-    for week in display_data:
-        week_start_dt = pd.to_datetime(week['weekStart'])
-        weeks_data.append({
-            '週': week_start_dt.strftime('%m/%d'),
-            'PR数': week['totalPRs'],
-            'マージ数': week['mergedPRs'],
-            '平均リードタイム': week['avgLeadTime']
-        })
+    merged_week = week_df[week_df['state'] == 'MERGED']
+    if not merged_week.empty:
+        merged_week_copy = merged_week.copy()
+        merged_week_copy['lead_time'] = (
+            pd.to_datetime(merged_week_copy['mergedAt'], format="ISO8601", utc=True) - 
+            pd.to_datetime(merged_week_copy['createdAt'], format="ISO8601", utc=True)
+        ).dt.total_seconds() / 3600 / 24
+        avg_lead = merged_week_copy['lead_time'].median()
+    else:
+        avg_lead = 0
     
-    trend_df = pd.DataFrame(weeks_data)
-    
-elif view_mode == "過去月単位":
-    st.markdown("### 📈 トレンド分析（過去12ヶ月）")
-    
-    # Use historical data for trends
-    display_count = min(12, len(historical_data_loaded['monthly']))
-    start_idx = max(0, len(historical_data_loaded['monthly']) - display_count)
-    display_data = historical_data_loaded['monthly'][start_idx:]
-    
-    weeks_data = []
-    for month in display_data:
-        month_start_dt = pd.to_datetime(month['monthStart'])
-        weeks_data.append({
-            '週': f"{month_start_dt.year}/{month_start_dt.month}",
-            'PR数': month['totalPRs'],
-            'マージ数': month['mergedPRs'],
-            '平均リードタイム': month['avgLeadTime']
-        })
-    
-    trend_df = pd.DataFrame(weeks_data)
-    
-elif view_mode == "過去年単位":
-    st.markdown("### 📈 トレンド分析（全年）")
-    
-    # Use historical data for trends
-    display_data = historical_data_loaded['yearly']
-    
-    weeks_data = []
-    for year in display_data:
-        weeks_data.append({
-            '週': str(year['year']),
-            'PR数': year['totalPRs'],
-            'マージ数': year['mergedPRs'],
-            '平均リードタイム': year['avgLeadTime']
-        })
-    
-    trend_df = pd.DataFrame(weeks_data)
-    
-else:
-    st.markdown("### 📈 トレンド分析（過去8週間）")
-    
-    # 過去8週間のデータを取得
-    weeks_data = []
-    for i in range(8, 0, -1):
-        week_s = now - timedelta(days=now.weekday() + 7*i)
-        week_e = week_s + timedelta(days=7)
-        
-        week_df = df_all[
-            (df_all['createdAt_dt'] >= week_s) & 
-            (df_all['createdAt_dt'] < week_e)
-        ].copy()
-        
-        merged_week = week_df[week_df['state'] == 'MERGED']
-        if not merged_week.empty:
-            merged_week_copy = merged_week.copy()
-            merged_week_copy['lead_time'] = (
-                pd.to_datetime(merged_week_copy['mergedAt'], format="ISO8601", utc=True) - 
-                pd.to_datetime(merged_week_copy['createdAt'], format="ISO8601", utc=True)
-            ).dt.total_seconds() / 3600 / 24
-            avg_lead = merged_week_copy['lead_time'].median()
-        else:
-            avg_lead = 0
-        
-        weeks_data.append({
-            '週': week_s.strftime('%m/%d'),
-            'PR数': len(week_df),
-            'マージ数': len(week_df[week_df['state'] == 'MERGED']),
-            '平均リードタイム': avg_lead
-        })
-    
-    trend_df = pd.DataFrame(weeks_data)
+    weeks_data.append({
+        '週': week_s.strftime('%m/%d'),
+        'PR数': len(week_df),
+        'マージ数': len(week_df[week_df['state'] == 'MERGED']),
+        '平均リードタイム': avg_lead
+    })
+
+trend_df = pd.DataFrame(weeks_data)
 
 col_left, col_right = st.columns(2)
 
@@ -894,7 +955,7 @@ if st.session_state.get('generate_report', False):
     report_text = f"""# GitHub PR 週間レポート
 
 **リポジトリ**: {owner}/{repo}  
-**期間**: {week_start.strftime('%Y/%m/%d')} - {week_end.strftime('%Y/%m/%d')}  
+**期間**: {week_start.astimezone(JST).strftime('%Y/%m/%d')} - {week_end.astimezone(JST).strftime('%Y/%m/%d')}  
 **作成日時**: {datetime.now(JST).strftime('%Y/%m/%d %H:%M:%S')} JST
 
 ---
@@ -924,6 +985,30 @@ if st.session_state.get('generate_report', False):
     
     report_text += "\n---\n\n*このレポートは GitHub PR Dashboard により自動生成されました。*"
     
+    report_text += "\n---\n\n## Four Keys 指標\n\n"
+    
+    dora_levels = {
+        'デプロイ頻度': get_dora_level('deployment_frequency', four_keys['deployment_frequency']),
+        'リードタイム': get_dora_level('lead_time_for_changes', four_keys['lead_time_for_changes']),
+        '変更失敗率': get_dora_level('change_failure_rate', four_keys['change_failure_rate']),
+        'MTTR': get_dora_level('time_to_restore_service', four_keys['time_to_restore_service'])
+    }
+    
+    report_text += "| 指標 | 値 | DORAレベル |\n"
+    report_text += "|------|-----|------------|\n"
+    report_text += f"| デプロイ頻度 | {four_keys['deployment_frequency']:.3f}回/日 | {dora_levels['デプロイ頻度']} |\n"
+    report_text += f"| リードタイム | {four_keys['lead_time_for_changes']:.1f}日 | {dora_levels['リードタイム']} |\n"
+    report_text += f"| 変更失敗率 | {four_keys['change_failure_rate']:.1f}% | {dora_levels['変更失敗率']} |\n"
+    report_text += f"| MTTR | {four_keys['time_to_restore_service']:.1f}時間 | {dora_levels['MTTR']} |\n"
+    
+    report_text += "\n---\n\n## 相関分析\n\n"
+    
+    if correlation_insights:
+        for insight in correlation_insights:
+            report_text += f"### {insight['title']}\n\n{insight['message']}\n\n"
+    else:
+        report_text += "相関分析の結果がありません。データが不足している可能性があります。\n\n"
+    
     st.download_button(
         label="📥 Markdownでダウンロード",
         data=report_text,
@@ -939,57 +1024,54 @@ if st.session_state.get('generate_report', False):
 st.markdown("---")
 
 # 詳細統計
-if view_mode == "現在の期間":
-    with st.expander("📊 詳細統計", expanded=False):
-        st.markdown("#### PR作成者別統計")
+with st.expander("📊 詳細統計", expanded=False):
+    st.markdown("#### PR作成者別統計")
+    
+    if not current_week_df.empty:
+        author_stats = current_week_df.groupby('author').agg({
+            'number': 'count',
+            'state': lambda x: (x == 'MERGED').sum()
+        }).reset_index()
+        author_stats.columns = ['作成者', 'PR数', 'マージ数']
+        author_stats['マージ率'] = (author_stats['マージ数'] / author_stats['PR数'] * 100).round(1)
+        author_stats = author_stats.sort_values('PR数', ascending=False)
         
-        if not current_week_df.empty:
-            author_stats = current_week_df.groupby('author').agg({
-                'number': 'count',
-                'state': lambda x: (x == 'MERGED').sum()
-            }).reset_index()
-            author_stats.columns = ['作成者', 'PR数', 'マージ数']
-            author_stats['マージ率'] = (author_stats['マージ数'] / author_stats['PR数'] * 100).round(1)
-            author_stats = author_stats.sort_values('PR数', ascending=False)
-            
-            st.dataframe(
-                author_stats,
-                use_container_width=True,
-                height=300
-            )
-        else:
-            st.info("データがありません")
+        st.dataframe(
+            author_stats,
+            use_container_width=True,
+            height=300
+        )
+    else:
+        st.info("データがありません")
+    
+    st.markdown("#### レビュワー別統計")
+    
+    reviewer_activities = []
+    for _, row in current_week_df.iterrows():
+        review_details = row.get("review_details", [])
+        if isinstance(review_details, list):
+            for review in review_details:
+                reviewer = review.get("author")
+                if reviewer:
+                    reviewer_activities.append({
+                        "レビュワー": reviewer,
+                        "PR#": row["number"],
+                        "状態": review.get("state")
+                    })
+    
+    if reviewer_activities:
+        reviewer_df = pd.DataFrame(reviewer_activities)
+        reviewer_stats = reviewer_df.groupby('レビュワー').agg({
+            'PR#': 'nunique',
+            '状態': 'count'
+        }).reset_index()
+        reviewer_stats.columns = ['レビュワー', 'レビューしたPR数', '総レビュー回数']
+        reviewer_stats = reviewer_stats.sort_values('レビューしたPR数', ascending=False)
         
-        st.markdown("#### レビュワー別統計")
-        
-        reviewer_activities = []
-        for _, row in current_week_df.iterrows():
-            review_details = row.get("review_details", [])
-            if isinstance(review_details, list):
-                for review in review_details:
-                    reviewer = review.get("author")
-                    if reviewer:
-                        reviewer_activities.append({
-                            "レビュワー": reviewer,
-                            "PR#": row["number"],
-                            "状態": review.get("state")
-                        })
-        
-        if reviewer_activities:
-            reviewer_df = pd.DataFrame(reviewer_activities)
-            reviewer_stats = reviewer_df.groupby('レビュワー').agg({
-                'PR#': 'nunique',
-                '状態': 'count'
-            }).reset_index()
-            reviewer_stats.columns = ['レビュワー', 'レビューしたPR数', '総レビュー回数']
-            reviewer_stats = reviewer_stats.sort_values('レビューしたPR数', ascending=False)
-            
-            st.dataframe(
-                reviewer_stats,
-                use_container_width=True,
-                height=300
-            )
-        else:
-            st.info("レビューデータがありません")
-else:
-    st.info("💡 詳細統計は現在の期間モードでのみ利用可能です。")
+        st.dataframe(
+            reviewer_stats,
+            use_container_width=True,
+            height=300
+        )
+    else:
+        st.info("レビューデータがありません")
